@@ -144,11 +144,16 @@ class Station:
         bikes_dist = np.array(bikes_dist)
         plt_label = -10
         plt.rcParams['font.sans-serif'] = ['SimHei']
-        marks = ['-o', '-s', '-^', '-p', '-^', '-v', '-p', '-d', '-h', '-8', '-2']
-        for i in range(11):
-            plt_label += 10
-            plt.plot(time_labels, bikes_dist[:, i], marks[i], label=str(plt_label) + '%电量车辆')
-        plt.legend()
+        # marks = ['-o', '-s', '-^', '-p', '-^', '-v', '-p', '-d', '-h', '-8', '-2']
+        fig, axes = plt.subplots(2, 5, sharey=True)
+        for i in range(2):
+            for j in range(5):
+                _ax = axes[i, j]
+                #_ax.set_xticks(time_labels)
+                plt_label += 10
+                # plt.step(time_labels, bikes_dist[:, i], marks[i], label=str(plt_label) + '%电量车辆')
+                _ax.step(time_labels, bikes_dist[:, j + 5 * i], label=str(plt_label) + '%电量车辆')
+                _ax.legend()
         plt.show()
 
 
