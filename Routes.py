@@ -8,7 +8,7 @@ maxIter = 100
 maxNbIter = 30
 maxNonImpIter = 15
 maxNbNonImpIter = 7
-#neighborhoods = ['nodes_swap']
+# neighborhoods = ['node_relocation']
 neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'nodes_swap']
 
 
@@ -31,6 +31,7 @@ class Route:
         self.timeUB = time_ub
 '''
 
+
 class RouteBuilder:
     def __init__(self, distance_matrix, time_matrix):
         self.c_ij = distance_matrix
@@ -45,6 +46,7 @@ class RouteBuilder:
         self.banList = []
         self.best_feas_sol = None
         self.best_feas_obj = None
+        self.last_sol_obj = None
 
     def copy_routes(self, a):
         return [r.copy() for r in a]
@@ -118,7 +120,8 @@ class RouteBuilder:
                                 sigma_1 = sol[num_tour][:j]
                                 sigma_2 = sol[num_tour][j:]
                                 add_obj = self.evaluate_solution([sigma_1 + [satellite] + sigma_2])
-                                add_f = all(self.get_time_window_feasibility([sigma_1 + [satellite] + sigma_2], [num_tour]))
+                                add_f = all(
+                                    self.get_time_window_feasibility([sigma_1 + [satellite] + sigma_2], [num_tour]))
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
@@ -135,6 +138,7 @@ class RouteBuilder:
         self.banList.append(self.evaluate_solution(self.routes))
         self.best_feas_sol = self.copy_routes(self.routes)
         self.best_feas_obj = self.evaluate_solution(self.best_feas_sol)
+        self.last_sol_obj = self.best_feas_obj
 
     def evaluate_solution(self, routes):
         total_dis = 0
@@ -254,8 +258,10 @@ class RouteBuilder:
                             obj = self.evaluate_solution([sigma_1 + sigma_3])
                             obj = obj + self.evaluate_solution([sigma_4 + sigma_2 + sigma_5])
                             obj = obj + S_sol - S_i - S_j
+                            obj = round(obj, 1)
                             r_feas_temp = r_feas.copy()
-                            r_feas_update = self.get_feasibility([sigma_1 + sigma_3, sigma_4 + sigma_2 + sigma_5], [i, j])
+                            r_feas_update = self.get_feasibility([sigma_1 + sigma_3, sigma_4 + sigma_2 + sigma_5],
+                                                                 [i, j])
                             r_feas_temp[i] = r_feas_update[0]
                             r_feas_temp[j] = r_feas_update[1]
                             f = all(r_feas_temp)
@@ -266,6 +272,7 @@ class RouteBuilder:
                                 sigma_4.remove(route_i[k])
                             obj = self.evaluate_solution([sigma_4 + sigma_2 + sigma_5])
                             obj = obj + S_sol - S_i
+                            obj = round(obj, 1)
                             r_feas_temp = r_feas.copy()
                             r_feas_update = self.get_feasibility([sigma_4 + sigma_2 + sigma_5], [i])
                             r_feas_temp[i] = r_feas_update[0]
@@ -296,7 +303,8 @@ class RouteBuilder:
                 else:
                     sigma_4.remove(routes[i][k])
                 routes[i] = sigma_4 + sigma_2 + sigma_5
-        return routes, savef, bestSol < S_sol
+            print(bestSol, S_sol, self.banList[-1])
+        return routes, savef, bestSol < self.last_sol_obj
 
     def nodes_swap(self):
         routes = self.copy_routes(self.routes)
@@ -319,6 +327,7 @@ class RouteBuilder:
                             obj = self.evaluate_solution([route_i])
                             obj = obj + self.evaluate_solution([route_j])
                             obj = obj + S_sol - S_i - S_j
+                            obj = round(obj, 1)
                             r_feas_temp = r_feas.copy()
                             r_feas_update = self.get_feasibility([route_i, route_j], [i, j])
                             r_feas_temp[i] = r_feas_update[0]
@@ -337,7 +346,8 @@ class RouteBuilder:
             j = saveMove[2]
             l = saveMove[3]
             routes[i][k], routes[j][l] = routes[j][l], routes[i][k]
-        return routes, savef, bestSol < S_sol
+            print(bestSol, S_sol, self.banList[-1])
+        return routes, savef, bestSol < self.last_sol_obj
 
     def intra_route_2opt(self):
         routes = self.copy_routes(self.routes)
@@ -358,6 +368,7 @@ class RouteBuilder:
                     sigma_3 = route_i[l + 1:]
                     obj = self.evaluate_solution([sigma_1 + sigma_2 + sigma_3])
                     obj = obj + S_sol - S_i
+                    obj = round(obj, 1)
                     r_feas_temp = r_feas.copy()
                     r_feas_update = self.get_feasibility([sigma_1 + sigma_2 + sigma_3], [i])
                     r_feas_temp[i] = r_feas_update[0]
@@ -378,7 +389,8 @@ class RouteBuilder:
             sigma_2.reverse()
             sigma_3 = routes[i][l + 1:]
             routes[i] = sigma_1 + sigma_2 + sigma_3
-        return routes, savef, bestSol < S_sol
+            print(bestSol, S_sol, self.banList[-1])
+        return routes, savef, bestSol < self.last_sol_obj
 
     def inter_routes_2opt(self):
         routes = self.copy_routes(self.routes)
@@ -403,6 +415,7 @@ class RouteBuilder:
                         obj = self.evaluate_solution([sigma_1 + sigma_4])
                         obj = obj + self.evaluate_solution([sigma_3 + sigma_2])
                         obj = obj + S_sol - S_i - S_j
+                        obj = round(obj, 1)
                         r_feas_temp = r_feas.copy()
                         r_feas_update = self.get_feasibility([sigma_1 + sigma_4, sigma_3 + sigma_2], [i, j])
                         r_feas_temp[i] = r_feas_update[0]
@@ -426,7 +439,8 @@ class RouteBuilder:
             sigma_4 = routes[j][l + 1:]
             routes[i] = sigma_1 + sigma_4
             routes[j] = sigma_3 + sigma_2
-        return routes, savef, bestSol < S_sol
+            print(bestSol, S_sol, self.banList[-1])
+        return routes, savef, bestSol < self.last_sol_obj
 
     def print_sol(self):
         for r in self.best_feas_sol:
@@ -462,13 +476,15 @@ class RouteBuilder:
                     # update banlist
                     self.banList.append(self.evaluate_solution(self.routes))
                     # update infFactor
+                    self.last_sol_obj = self.evaluate_solution(self.routes) if neighbor[
+                        1] else round(self.evaluate_solution(self.routes) * self.infFactor, 1)
                     if neighbor[1]:
                         self.update_inf_factor(-1)
                     else:
                         self.update_inf_factor(1)
                     if neighbor[2]:
                         if neighbor[1]:
-                            if self.evaluate_solution(self.routes) <= self.best_feas_obj -0.1:
+                            if self.evaluate_solution(self.routes) <= self.best_feas_obj - 0.1:
                                 print('Found A Better Solution')
                                 self.best_feas_sol = self.copy_routes(self.routes)
                                 self.best_feas_obj = self.evaluate_solution(self.best_feas_sol)
@@ -480,10 +496,12 @@ class RouteBuilder:
                         print('NbNonImpIter', NbNonImpIter)
                     if NbNonImpIter >= maxNbNonImpIter:
                         self.routes = self.copy_routes(self.best_feas_sol)
+                        self.last_sol_obj = self.best_feas_obj
                         self.reset_inf_factor()
                         break
                 self.reset_inf_factor()
                 self.routes = self.copy_routes(self.best_feas_sol)
+                self.last_sol_obj = self.best_feas_obj
             if ImpIter is False:
                 NonImpIter = NonImpIter + 1
                 print('NonImpIter', NonImpIter)
