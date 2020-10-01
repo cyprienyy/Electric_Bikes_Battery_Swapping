@@ -39,10 +39,11 @@ def resolve_soloman(info, mat):
 
 
 if __name__ == '__main__':
-    file_path = r'.\solomon_25\C101.txt'
+    file_path = r'.\solomon_25\C102.txt'
     _info, _mat = read_single_soloman(file_path)
     _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
     _dis_mat = np.around(_dis_mat, 1)
+    _vehicle_num = 3
     routeBuilder = RouteBuilder(_dis_mat, _dis_mat)
     routeBuilder.add_empty_route([0]*_vehicle_num, [0]*_vehicle_num, [0]*_vehicle_num, [_t_win[0, 1]]*_vehicle_num)
     routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:])
