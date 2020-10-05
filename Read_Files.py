@@ -49,6 +49,7 @@ if __name__ == '__main__':
     routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:])
     routeBuilder.build_initial_solution()
     routeBuilder.print_sol()
+    '''
     print(routeBuilder.best_feas_obj)
     print(routeBuilder.best_feas_sol)
     print('------------------')
@@ -57,4 +58,7 @@ if __name__ == '__main__':
     print(routeBuilder.evaluate_solution(routeBuilder.best_feas_sol))
     print(routeBuilder.best_feas_sol)
     print('++++++++++++++++++')
+    '''
     print(routeBuilder.get_sol_schedule())
+    routeBuilder.fix_sol(101)
+    print('finished')

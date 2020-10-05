@@ -488,14 +488,22 @@ class RouteBuilder:
                     cur = j
                 else:
                     break
-            self.routes_info[i]['current_time'] = s_jr[cur] + self.get_service_time(r[cur])
-            # 还要改变load
-            for _, j in enumerate(r[1:cur + 1]):
+            # current_load是经过cur点以后的， current_time是服务过cur以后的
+            self.routes_info[i]['current_time'] = max(s_jr[cur] + self.get_service_time(r[cur]), lp)
+            load = self.routes_info[i]['current_load']
+            for j in r[1:cur + 1]:
+                if j < self.c_ij.shape[0]:
+                    load = 0
+                else:
+                    load = load + self.key2Task[j].demand
+            self.routes_info[i]['current_load'] = load
+            for _, j in enumerate(r[0:cur + 1]):
                 self.fixedRoutes[i].append(j)
                 self.fixedKeys.append(j)
             for _, j in enumerate(r[cur + 1:-1]):
                 del self.key2Task[j]
             temp_r = [r[cur], r[-1]]
+            self.best_feas_sol[i] = temp_r
 
     def get_neighborhood(self, neighborhood_index):
         if neighborhood_index == 'node_relocation':
