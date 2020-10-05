@@ -468,6 +468,35 @@ class RouteBuilder:
                      self.key2Task[r[j]].demand))
         return _tasks
 
+    def fix_sol(self, lp):
+        for i, r in enumerate(self.best_feas_sol):
+            s_jr = np.zeros(len(r))
+            w_jr = np.zeros(len(r))
+            s_jr[0] = self.routes_info[i]['current_time'] - self.get_service_time(r[0])
+            for j in range(1, len(r)):
+                s_jr[j] = s_jr[j - 1] + self.t_ij[
+                    self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] + self.get_service_time(
+                    r[j - 1])
+                if s_jr[j] <= self.get_tw_lb(r[j]):
+                    w_jr[j] = self.get_tw_lb(r[j]) - s_jr[j]
+                    s_jr[j] = self.get_tw_lb(r[j])
+                else:
+                    w_jr[j] = 0
+            cur = 0
+            for j in range(1, len(r) - 1):
+                if s_jr[j] - self.t_ij[self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] < lp:
+                    cur = j
+                else:
+                    break
+            self.routes_info[i]['current_time'] = s_jr[cur] + self.get_service_time(r[cur])
+            # 还要改变load
+            for _, j in enumerate(r[1:cur + 1]):
+                self.fixedRoutes[i].append(j)
+                self.fixedKeys.append(j)
+            for _, j in enumerate(r[cur + 1:-1]):
+                del self.key2Task[j]
+            temp_r = [r[cur], r[-1]]
+
     def get_neighborhood(self, neighborhood_index):
         if neighborhood_index == 'node_relocation':
             return self.node_relocation()
