@@ -158,6 +158,7 @@ class Station:
 
 
 if __name__ == '__main__':
+    '''
     eventList = EventList()
     Stations = [Station([20] * 5) for _ in range(10)]
     demands = np.load('demands.npy')
@@ -170,7 +171,6 @@ if __name__ == '__main__':
         Stations[nextEvent.startPosition - 1].process_event(nextEvent, eventList)
         eventList.remove_event()
     Stations[5].show_record()
-    '''
     numBikes = [20, 10, 20, 60]
     station = Station(numBikes)
     eventList = EventList()
