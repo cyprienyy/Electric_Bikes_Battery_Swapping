@@ -447,6 +447,27 @@ class RouteBuilder:
             if len(r) > 2:
                 print([self.trans_key_to_station(i) for i in r])
 
+    def get_sol_schedule(self):
+        _tasks = []
+        for i, r in enumerate(self.best_feas_sol):
+            s_jr = np.zeros(len(r))
+            w_jr = np.zeros(len(r))
+            s_jr[0] = self.routes_info[i]['current_time'] - self.get_service_time(r[0])
+            for j in range(1, len(r)):
+                s_jr[j] = s_jr[j - 1] + self.t_ij[
+                    self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] + self.get_service_time(
+                    r[j - 1])
+                if s_jr[j] <= self.get_tw_lb(r[j]):
+                    w_jr[j] = self.get_tw_lb(r[j]) - s_jr[j]
+                    s_jr[j] = self.get_tw_lb(r[j])
+                else:
+                    w_jr[j] = 0
+            for j in range(1, len(r) - 1):
+                _tasks.append(
+                    (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
+                     self.key2Task[r[j]].demand))
+        return _tasks
+
     def get_neighborhood(self, neighborhood_index):
         if neighborhood_index == 'node_relocation':
             return self.node_relocation()

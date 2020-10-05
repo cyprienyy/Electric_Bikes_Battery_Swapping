@@ -56,3 +56,5 @@ if __name__ == '__main__':
     routeBuilder.print_sol()
     print(routeBuilder.evaluate_solution(routeBuilder.best_feas_sol))
     print(routeBuilder.best_feas_sol)
+    print('++++++++++++++++++')
+    print(routeBuilder.get_sol_schedule())
