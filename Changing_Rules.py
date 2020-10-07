@@ -21,6 +21,7 @@ class ChangingRules:
         self.demands = demands.tolist()
         self.charge_schedule = []
         self.routeBuilder = None
+        self.station_info = []
 
     def prepare_event_list(self):
         for d in self.demands:
@@ -35,7 +36,6 @@ class ChangingRules:
             self.eventList.remove_event()
 
     def get_station_info(self, lp, up):
-        station_info = []
         for station in self.stations:
             time_labels = list(station.bikesRecord.keys())
             time_labels.sort()
@@ -55,21 +55,54 @@ class ChangingRules:
                 time_labels[0] = lp
             if time_labels[-1] < up:
                 time_labels[-1] = up
-            station_info.append([time_labels, bikes_dist, loss])
-        return station_info
+            self.station_info.append([time_labels, bikes_dist, loss])
 
     def prepare_route_builder(self):
         self.routeBuilder = RouteBuilder(_dis_mat, _t_mat)
         self.routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
-                                          3600 * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
+                                          [3600] * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
 
     def produce_tasks(self, lp, up):
         # 引入ban list
-        _tasks = self.rule_1(self.get_station_info(lp, up))
-        for d in enumerate(_tasks):
-            self.routeBuilder.add_tasks(d[0], d[1], d[2], d[3], d[4])
+        _tasks = []
+        for i, info in enumerate(self.station_info):
+            _task = self.rule_1(info, lp, up)
+            if _task:
+                _tasks.append((i + 1,) + _task)
+        _tasks = list(zip(*_tasks))
+        self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4])
         self.routeBuilder.build_initial_solution()
         self.routeBuilder.multiple_neighborhood_search()
 
-    def rule_1(self, station_info):
-        return []
+    def rule_1(self, info, lp, up):
+        time_labels, bikes_num_info, loss_info = info
+        s_t = None
+        e_t = None
+        for i, bikes_num in enumerate(bikes_num_info):
+            if sum(bikes_num[0:3]) >= 3:
+                s_t = time_labels[i]
+                de = sum(bikes_num[0:3])
+                for j, loss in enumerate(loss_info[i+1:]):
+                    if loss - loss_info[i] >= 2:
+                        e_t = time_labels[i+j+1]
+                        break
+                if e_t is None:
+                    e_t = time_labels[-1]
+                break
+        ser_t = 180
+        if s_t is not None:
+            return s_t, e_t, de, ser_t
+        else:
+            return ()
+
+
+
+
+if __name__ == '__main__':
+    changingRules = ChangingRules()
+    changingRules.prepare_route_builder()
+    changingRules.prepare_event_list()
+    changingRules.stimulate()
+    changingRules.get_station_info(0, 3600)
+    changingRules.produce_tasks(0, 3600)
+    print()

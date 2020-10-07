@@ -489,7 +489,7 @@ class RouteBuilder:
                 else:
                     break
             # current_load是经过cur点以后的， current_time是服务过cur以后的
-            self.routes_info[i]['current_time'] = max(s_jr[cur] + self.get_service_time(r[cur]), lp)
+            self.routes_info[i]['current_time'] = s_jr[cur] + self.get_service_time(r[cur])
             load = self.routes_info[i]['current_load']
             for j in r[1:cur + 1]:
                 if j < self.c_ij.shape[0]:
