@@ -1,5 +1,5 @@
-from Stimulation import *
 import numpy as np
+from Stimulation import *
 from Routes import Task, RouteBuilder
 from Read_Files import read_single_soloman, resolve_soloman
 
@@ -74,7 +74,9 @@ class ChangingRules:
         self.routeBuilder.build_initial_solution()
         self.routeBuilder.multiple_neighborhood_search()
 
-    def rule_1(self, info, lp, up):
+    @classmethod
+    def rule_1(cls, info, lp, up):
+        # rule1在一个站点低于30%电量车达到一定数量后产生时间窗下限，在损失达到一定值后产生上限。
         time_labels, bikes_num_info, loss_info = info
         s_t = None
         e_t = None
@@ -82,9 +84,9 @@ class ChangingRules:
             if sum(bikes_num[0:3]) >= 3:
                 s_t = time_labels[i]
                 de = sum(bikes_num[0:3])
-                for j, loss in enumerate(loss_info[i+1:]):
+                for j, loss in enumerate(loss_info[i + 1:]):
                     if loss - loss_info[i] >= 2:
-                        e_t = time_labels[i+j+1]
+                        e_t = time_labels[i + j + 1]
                         break
                 if e_t is None:
                     e_t = time_labels[-1]
@@ -94,8 +96,6 @@ class ChangingRules:
             return s_t, e_t, de, ser_t
         else:
             return ()
-
-
 
 
 if __name__ == '__main__':
