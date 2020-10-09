@@ -36,20 +36,22 @@ def get_skip_for_feasible_route(a_i, b_i, q_i, route, capacity):
                 theta_sum_tmp = theta_i_0 + theta_i_1 + q_i[j]
                 theta_1_tmp = theta_i_1 + min(q_i[j] + theta_i_0, a_i[j])
                 theta_0_tmp = theta_sum_tmp - theta_1_tmp
-                labels_list[i][tuple(sk_p_list)] = (theta_0_tmp, theta_1_tmp)
+                labels_list[j][tuple(sk_p_list)] = (theta_0_tmp, theta_1_tmp)
                 if j == len(route) - 1 or theta_i_1 < b_i[j] - q_i[j]:
                     break
-                sk_p_list.append(j)
-                # To do: add the calculation of new theta_i_1, theta_i_0
+                else:
+                    theta_i_1 = theta_i_1 - (b_i[j] - q_i[j])
+                    theta_i_0 = theta_sum_tmp - theta_i_1
+                    sk_p_list.append(route[j])
     return
 
 
 if __name__ == '__main__':
-    _q_i = [0, -3, 2, 4, -7, 0]
+    _q_i = [0, -4, 5, 2, 1, 0]
     _capacity = 10
     _route = [0, 1, 2, 3, 4, 0]
     print(get_feasibility_of_balance_route(_q_i, _route, _capacity, True))
-    _a_i = [0] * 6
-    _b_i = [0] * 6
+    _a_i = [0] + [5, 1, 5, 2] + [0]
+    _b_i = [0] + [9, 5, 2, 1] + [0]
     get_skip_for_feasible_route(_a_i, _b_i, _q_i, _route, _capacity)
     print('Main')
