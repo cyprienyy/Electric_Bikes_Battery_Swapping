@@ -76,6 +76,7 @@ def backtracking_best_combination(skip_plans_by_route, battery_change_route):
     def generate(combination, i, shortest_distance):
         if i == len(skip_plans_by_route):
             new_s_dis = evaluate_saved_distance(combination, battery_change_route)
+            print(combination)
             if new_s_dis < shortest_distance[0]:
                 shortest_distance[0] = new_s_dis
         else:
@@ -110,5 +111,5 @@ if __name__ == '__main__':
     _b_i = [0] + [9, 5, 2, 1] + [3, 3, 7, 0]
     _tsp_route = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0]
     _skip_plans_by_route = [[(-1, 1, 2), (-1, 2, 3)], [(-1, 6, 5), (-1, 7, 9)]]
-    backtracking_best_combination(_skip_plans_by_route, _tsp_route)
+    print(get_most_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
     print('Main')
