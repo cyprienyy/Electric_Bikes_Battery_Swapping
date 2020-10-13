@@ -30,6 +30,8 @@ class ChangingRules:
             self.eventList.add_event(ChargeEvent(c[1], c[0], c[2], c[3]))
 
     def stimulate(self):
+        for station in self.stations:
+            station.clear_state()
         while self.eventList.next_event() is not None:
             next_event = self.eventList.next_event()
             self.stations[next_event.startPosition - 1].process_event(next_event, self.eventList)
@@ -72,7 +74,12 @@ class ChangingRules:
         _tasks = list(zip(*_tasks))
         self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4])
         self.routeBuilder.build_initial_solution()
-        self.routeBuilder.multiple_neighborhood_search()
+        # self.routeBuilder.multiple_neighborhood_search()
+
+    def get_routed_result(self):
+        _tasks = self.routeBuilder.get_sol_schedule()
+        self.charge_schedule.extend(_tasks)
+        return
 
     @classmethod
     def rule_1(cls, info, lp, up):
@@ -80,6 +87,7 @@ class ChangingRules:
         time_labels, bikes_num_info, loss_info = info
         s_t = None
         e_t = None
+        de = None
         for i, bikes_num in enumerate(bikes_num_info):
             if sum(bikes_num[0:3]) >= 3:
                 s_t = time_labels[i]
@@ -105,4 +113,7 @@ if __name__ == '__main__':
     changingRules.stimulate()
     changingRules.get_station_info(0, 3600)
     changingRules.produce_tasks(0, 3600)
+    changingRules.get_routed_result()
+    changingRules.prepare_event_list()
+    changingRules.stimulate()
     print()

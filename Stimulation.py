@@ -156,6 +156,12 @@ class Station:
                 _ax.legend()
         plt.show()
 
+    def clear_state(self):
+        self.loss = Counter()
+        self.onsiteVehicles = Counter()
+        self.numBikes = Counter(self.bikesRecord[0])
+        self.bikesRecord = defaultdict(Counter)
+        self.record(0)
 
 if __name__ == '__main__':
     '''
