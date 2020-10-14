@@ -102,6 +102,7 @@ def evaluate_saved_distance(skipped_points, battery_change_route, c_ij=np.random
 
 
 if __name__ == '__main__':
+    print('Calculate_saved_distance Main')
     _q_i = [0, -4, 5, 2, 1, 2, 4, -3, -5]
     # _q_i_0 = [0, -4, 5, 2, 1, 0]
     # _q_i_1 = [0, 2, 4, -3, -5, 0]

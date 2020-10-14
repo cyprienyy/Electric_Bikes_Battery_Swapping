@@ -149,7 +149,7 @@ class Station:
         for i in range(2):
             for j in range(5):
                 _ax = axes[i, j]
-                #_ax.set_xticks(time_labels)
+                # _ax.set_xticks(time_labels)
                 plt_label += 10
                 # plt.step(time_labels, bikes_dist[:, i], marks[i], label=str(plt_label) + '%电量车辆')
                 _ax.step(time_labels, bikes_dist[:, j + 5 * i], label=str(plt_label) + '%电量车辆')
@@ -163,7 +163,9 @@ class Station:
         self.bikesRecord = defaultdict(Counter)
         self.record(0)
 
+
 if __name__ == '__main__':
+    print('Stimulation Main')
     '''
     eventList = EventList()
     Stations = [Station([20] * 5) for _ in range(10)]
