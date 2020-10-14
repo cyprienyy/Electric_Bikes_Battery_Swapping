@@ -8,28 +8,25 @@ maxIter = 100
 maxNbIter = 30
 maxNonImpIter = 15
 maxNbNonImpIter = 7
+INF_FACTOR = 1.1
+INF_STEP_UP = 0.05
+INF_STEP_DOWN = 0.02
+INF_LOWER_BOUND = 1
 # neighborhoods = ['node_relocation']
 neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'nodes_swap']
 
 
 class Task:
     def __init__(self, location, start_time, end_time, task_demand, service_time):
+        # def __init__(self, location, start_time, end_time, task_demand, service_time, w_i, r_mrt):
+        # self.w_i = w_i
+        # self.r_mrt = r_mrt
         self.location = location
         self.startTime = start_time
         self.endTime = end_time
         self.demand = task_demand
-        self.onRoute = None
+        # self.onRoute = None
         self.serviceTime = service_time
-
-
-'''
-class Route:
-    def __init__(self, time_lb, time_ub, head='head', tail='tail'):
-        self.link = {head: (None, tail), tail: (head, None)}
-        self.currentHead = head
-        self.timeLB = time_lb
-        self.timeUB = time_ub
-'''
 
 
 class RouteBuilder:
@@ -48,25 +45,26 @@ class RouteBuilder:
         self.best_feas_obj = None
         self.last_sol_obj = None
 
-    def copy_routes(self, a):
+    @classmethod
+    def copy_routes(cls, a):
         return [r.copy() for r in a]
 
-    def add_empty_route(self, heads, tails, time_lbs, time_ubs):
-        for head, tail, time_lb, time_ub in zip(heads, tails, time_lbs, time_ubs):
+    def add_empty_route(self, heads, tails, time_lbs, time_ubs, capacities):
+        for head, tail, time_lb, time_ub, capacity in zip(heads, tails, time_lbs, time_ubs, capacities):
             self.routes.append([head, tail])
-            self.fixedRoutes.append([])
-            self.routes_info.append({'current_time': time_lb, 'time_ub': time_ub, 'current_load': 0, 'capacity': 200})
+            self.fixedRoutes.append([head])
+            self.routes_info.append(
+                {'current_time': time_lb, 'time_ub': time_ub, 'current_load': 0, 'capacity': capacity})
 
-    def add_tasks(self, locations, start_times, end_times, demands, service_times):
+    def add_tasks(self, *args):
         if self.fixedKeys:
             start_key = max(max(self.fixedKeys), self.c_ij.shape[0])
         else:
             start_key = self.c_ij.shape[0]
 
-        for location, start_time, end_time, task_demand, service_time in zip(locations, start_times, end_times, demands,
-                                                                             service_times):
+        for _task_param in zip(*args):
             start_key = start_key + 1
-            task = Task(location, start_time, end_time, task_demand, service_time)
+            task = Task(*_task_param)
             self.activeKeys.append(start_key)
             self.key2Task[start_key] = task
 
@@ -78,68 +76,6 @@ class RouteBuilder:
         else:
             return self.key2Task[key].location
 
-    def build_initial_solution(self):
-        unassigned_nodes = self.activeKeys.copy()
-        add_move = None
-        num_tour = 0
-        sol = self.copy_routes(self.routes)
-        while num_tour < len(sol) and unassigned_nodes:
-            insertion_allowed = True
-            while insertion_allowed and unassigned_nodes:
-                best_sol = float('inf')
-                move = None
-                for i in unassigned_nodes:
-                    for j in range(1, len(sol[num_tour])):
-                        sigma_1 = sol[num_tour][:j]
-                        sigma_2 = sol[num_tour][j:]
-                        obj = self.evaluate_solution([sigma_1 + [i] + sigma_2])
-                        f = all(self.get_feasibility([sigma_1 + [i] + sigma_2], [num_tour]))
-                        if obj < best_sol and f:
-                            move = (i, j)
-                            best_sol = obj
-                if move:
-                    i = move[0]
-                    j = move[1]
-                    sigma_1 = sol[num_tour][:j]
-                    sigma_2 = sol[num_tour][j:]
-                    sol[num_tour] = sigma_1 + [i] + sigma_2
-                    unassigned_nodes.remove(move[0])
-                    add_move = None
-                else:
-                    if add_move:
-                        j = add_move[1]
-                        sigma_1 = sol[num_tour][:j]
-                        sigma_2 = sol[num_tour][j + 1:]
-                        sol[num_tour] = sigma_1 + sigma_2
-                        add_move = None
-                        insertion_allowed = False
-                    else:
-                        best_add_sol = float('inf')
-                        for j in range(1, len(sol[num_tour])):
-                            if sol[num_tour][j - 1] != satellite and sol[num_tour][j] != satellite:
-                                sigma_1 = sol[num_tour][:j]
-                                sigma_2 = sol[num_tour][j:]
-                                add_obj = self.evaluate_solution([sigma_1 + [satellite] + sigma_2])
-                                add_f = all(
-                                    self.get_time_window_feasibility([sigma_1 + [satellite] + sigma_2], [num_tour]))
-                                if add_obj < best_add_sol and add_f:
-                                    add_move = (satellite, j)
-                                    best_add_sol = add_obj
-                        if add_move:
-                            i = add_move[0]
-                            j = add_move[1]
-                            sigma_1 = sol[num_tour][:j]
-                            sigma_2 = sol[num_tour][j:]
-                            sol[num_tour] = sigma_1 + [i] + sigma_2
-                        else:
-                            insertion_allowed = False
-            num_tour = num_tour + 1
-        self.routes = self.copy_routes(sol)
-        self.banList.append(self.evaluate_solution(self.routes))
-        self.best_feas_sol = self.copy_routes(self.routes)
-        self.best_feas_obj = self.evaluate_solution(self.best_feas_sol)
-        self.last_sol_obj = self.best_feas_obj
-
     def evaluate_solution(self, routes):
         total_dis = 0
         for r in routes:
@@ -147,11 +83,25 @@ class RouteBuilder:
                 total_dis = total_dis + self.c_ij[self.trans_key_to_station(r[i]), self.trans_key_to_station(r[i + 1])]
         return round(total_dis, 1)
 
+    def evaluate_solution_by_time_func_of_task(self, routes, tour_id, func):
+        total_ob = 0
+        for i, r in enumerate(routes):
+            current_time = self.routes_info[tour_id[i]]['current_time'] - self.get_service_time(r[0])
+            for j in range(0, len(r) - 2):
+                current_time = current_time + self.get_service_time(r[j]) + self.t_ij[
+                    self.trans_key_to_station(r[j]), self.trans_key_to_station(r[j + 1])]
+                total_ob = total_ob + func(r[j + 1], current_time)
+        return total_ob
+
+    def quadratic_response_time_cost_of_task(self, task_key, task_arrive_time):
+        _task = self.key2Task[task_key]
+        return _task.w_i * (task_arrive_time / _task.r_mrt) ^ 2
+
     def get_feasibility(self, routes, tour_id):
         return [all(f_col) for f_col in
                 zip(self.get_load_feasibility(routes, tour_id), self.get_time_window_feasibility(routes, tour_id))]
 
-    def get_time_feasibility(self, routes, tour_id):
+    def get_period_upper_bound_feasibility(self, routes, tour_id):
         for i, r in enumerate(routes):
             period = self.routes_info[tour_id[i]]['time_ub']
             total_time = self.routes_info[tour_id[i]]['current_time']
@@ -221,17 +171,79 @@ class RouteBuilder:
             l_feas.append(l_f)
         return l_feas
 
+    def build_initial_solution(self):
+        unassigned_nodes = self.activeKeys.copy()
+        add_move = None
+        num_tour = 0
+        sol = self.copy_routes(self.routes)
+        while num_tour < len(sol) and unassigned_nodes:
+            insertion_allowed = True
+            while insertion_allowed and unassigned_nodes:
+                best_sol = float('inf')
+                move = None
+                for i in unassigned_nodes:
+                    for j in range(1, len(sol[num_tour])):
+                        sigma_1 = sol[num_tour][:j]
+                        sigma_2 = sol[num_tour][j:]
+                        obj = self.evaluate_solution([sigma_1 + [i] + sigma_2])
+                        f = all(self.get_feasibility([sigma_1 + [i] + sigma_2], [num_tour]))
+                        if obj < best_sol and f:
+                            move = (i, j)
+                            best_sol = obj
+                if move:
+                    i = move[0]
+                    j = move[1]
+                    sigma_1 = sol[num_tour][:j]
+                    sigma_2 = sol[num_tour][j:]
+                    sol[num_tour] = sigma_1 + [i] + sigma_2
+                    unassigned_nodes.remove(move[0])
+                    add_move = None
+                else:
+                    if add_move:
+                        j = add_move[1]
+                        sigma_1 = sol[num_tour][:j]
+                        sigma_2 = sol[num_tour][j + 1:]
+                        sol[num_tour] = sigma_1 + sigma_2
+                        add_move = None
+                        insertion_allowed = False
+                    else:
+                        best_add_sol = float('inf')
+                        for j in range(1, len(sol[num_tour])):
+                            if sol[num_tour][j - 1] != satellite and sol[num_tour][j] != satellite:
+                                sigma_1 = sol[num_tour][:j]
+                                sigma_2 = sol[num_tour][j:]
+                                add_obj = self.evaluate_solution([sigma_1 + [satellite] + sigma_2])
+                                add_f = all(
+                                    self.get_time_window_feasibility([sigma_1 + [satellite] + sigma_2], [num_tour]))
+                                if add_obj < best_add_sol and add_f:
+                                    add_move = (satellite, j)
+                                    best_add_sol = add_obj
+                        if add_move:
+                            i = add_move[0]
+                            j = add_move[1]
+                            sigma_1 = sol[num_tour][:j]
+                            sigma_2 = sol[num_tour][j:]
+                            sol[num_tour] = sigma_1 + [i] + sigma_2
+                        else:
+                            insertion_allowed = False
+            num_tour = num_tour + 1
+        self.routes = self.copy_routes(sol)
+        self.banList.append(self.evaluate_solution(self.routes))
+        self.best_feas_sol = self.copy_routes(self.routes)
+        self.best_feas_obj = self.evaluate_solution(self.best_feas_sol)
+        self.last_sol_obj = self.best_feas_obj
+
     # 关于infFactor
-    def reset_inf_factor(self, init_val=1.1):
+    def reset_inf_factor(self, init_val=INF_FACTOR):
         self.infFactor = init_val
 
-    def update_inf_factor(self, symbol, inf_step_up=0.05, inf_step_down=0.02):
+    def update_inf_factor(self, symbol, inf_step_up=INF_STEP_UP, inf_step_down=INF_STEP_DOWN):
         if symbol > 0:
             self.infFactor = self.infFactor + inf_step_up
         else:
             self.infFactor = self.infFactor - inf_step_down
-        if self.infFactor < 1:
-            self.infFactor = 1
+        if self.infFactor < INF_LOWER_BOUND:
+            self.infFactor = INF_LOWER_BOUND
 
     def node_relocation(self):
         routes = self.copy_routes(self.routes)
@@ -442,69 +454,6 @@ class RouteBuilder:
             print(bestSol, S_sol, self.banList[-1])
         return routes, savef, bestSol < self.last_sol_obj
 
-    def print_sol(self):
-        for r in self.best_feas_sol:
-            if len(r) > 2:
-                print([self.trans_key_to_station(i) for i in r])
-
-    def get_sol_schedule(self):
-        _tasks = []
-        for i, r in enumerate(self.best_feas_sol):
-            s_jr = np.zeros(len(r))
-            w_jr = np.zeros(len(r))
-            s_jr[0] = self.routes_info[i]['current_time'] - self.get_service_time(r[0])
-            for j in range(1, len(r)):
-                s_jr[j] = s_jr[j - 1] + self.t_ij[
-                    self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] + self.get_service_time(
-                    r[j - 1])
-                if s_jr[j] <= self.get_tw_lb(r[j]):
-                    w_jr[j] = self.get_tw_lb(r[j]) - s_jr[j]
-                    s_jr[j] = self.get_tw_lb(r[j])
-                else:
-                    w_jr[j] = 0
-            for j in range(1, len(r) - 1):
-                _tasks.append(
-                    (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
-                     self.key2Task[r[j]].demand))
-        return _tasks
-
-    def fix_sol(self, lp):
-        for i, r in enumerate(self.best_feas_sol):
-            s_jr = np.zeros(len(r))
-            w_jr = np.zeros(len(r))
-            s_jr[0] = self.routes_info[i]['current_time'] - self.get_service_time(r[0])
-            for j in range(1, len(r)):
-                s_jr[j] = s_jr[j - 1] + self.t_ij[
-                    self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] + self.get_service_time(
-                    r[j - 1])
-                if s_jr[j] <= self.get_tw_lb(r[j]):
-                    w_jr[j] = self.get_tw_lb(r[j]) - s_jr[j]
-                    s_jr[j] = self.get_tw_lb(r[j])
-                else:
-                    w_jr[j] = 0
-            cur = 0
-            for j in range(1, len(r) - 1):
-                if s_jr[j] - self.t_ij[self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] < lp:
-                    cur = j
-                else:
-                    break
-            # current_load是经过cur点以后的， current_time是服务过cur以后的
-            self.routes_info[i]['current_time'] = s_jr[cur] + self.get_service_time(r[cur])
-            load = self.routes_info[i]['current_load']
-            for j in r[1:cur + 1]:
-                if j < self.c_ij.shape[0]:
-                    load = 0
-                else:
-                    load = load + self.key2Task[j].demand
-            self.routes_info[i]['current_load'] = load
-            for _, j in enumerate(r[0:cur + 1]):
-                self.fixedRoutes[i].append(j)
-                self.fixedKeys.append(j)
-            for _, j in enumerate(r[cur + 1:-1]):
-                del self.key2Task[j]
-            temp_r = [r[cur], r[-1]]
-            self.best_feas_sol[i] = temp_r
-
     def get_neighborhood(self, neighborhood_index):
         if neighborhood_index == 'node_relocation':
             return self.node_relocation()
@@ -566,6 +515,71 @@ class RouteBuilder:
             if NonImpIter >= maxNonImpIter:
                 break
             print('Iter', it)
+
+    def print_sol(self):
+        for r in self.best_feas_sol:
+            if len(r) > 2:
+                print([self.trans_key_to_station(i) for i in r])
+        return
+
+    def get_sol_schedule(self):
+        _tasks = []
+        for i, r in enumerate(self.best_feas_sol):
+            s_jr = np.zeros(len(r))
+            w_jr = np.zeros(len(r))
+            s_jr[0] = self.routes_info[i]['current_time'] - self.get_service_time(r[0])
+            for j in range(1, len(r)):
+                s_jr[j] = s_jr[j - 1] + self.t_ij[
+                    self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] + self.get_service_time(
+                    r[j - 1])
+                if s_jr[j] <= self.get_tw_lb(r[j]):
+                    w_jr[j] = self.get_tw_lb(r[j]) - s_jr[j]
+                    s_jr[j] = self.get_tw_lb(r[j])
+                else:
+                    w_jr[j] = 0
+            for j in range(1, len(r) - 1):
+                _tasks.append(
+                    (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
+                     self.key2Task[r[j]].demand))
+        return _tasks
+
+    def fix_sol(self, lp):
+        for i, r in enumerate(self.best_feas_sol):
+            s_jr = np.zeros(len(r))
+            w_jr = np.zeros(len(r))
+            s_jr[0] = self.routes_info[i]['current_time'] - self.get_service_time(r[0])
+            for j in range(1, len(r)):
+                s_jr[j] = s_jr[j - 1] + self.t_ij[
+                    self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] + self.get_service_time(
+                    r[j - 1])
+                if s_jr[j] <= self.get_tw_lb(r[j]):
+                    w_jr[j] = self.get_tw_lb(r[j]) - s_jr[j]
+                    s_jr[j] = self.get_tw_lb(r[j])
+                else:
+                    w_jr[j] = 0
+            cur = 0
+            for j in range(1, len(r) - 1):
+                if s_jr[j] - self.t_ij[self.trans_key_to_station(r[j - 1]), self.trans_key_to_station(r[j])] < lp:
+                    cur = j
+                else:
+                    break
+            # current_load是经过cur点以后的， current_time是服务过cur以后的
+            self.routes_info[i]['current_time'] = s_jr[cur] + self.get_service_time(r[cur])
+            load = self.routes_info[i]['current_load']
+            for j in r[1:cur + 1]:
+                if j < self.c_ij.shape[0]:
+                    load = 0
+                else:
+                    load = load + self.key2Task[j].demand
+            self.routes_info[i]['current_load'] = load
+            for _, j in enumerate(r[1:cur + 1]):
+                self.fixedRoutes[i].append(j)
+                self.fixedKeys.append(j)
+            for _, j in enumerate(r[cur + 1:-1]):
+                del self.key2Task[j]
+            temp_r = [r[cur], r[-1]]
+            self.best_feas_sol[i] = temp_r
+        return
 
 
 if __name__ == '__main__':
