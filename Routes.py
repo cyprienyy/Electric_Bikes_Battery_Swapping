@@ -1,9 +1,11 @@
 import numpy as np
 
-# 定义宏观变量
+# 定义宏观变量。
 satellite = -1
 upper_limit = 7200
 lower_limit = 0
+
+# 与Multiple Neighborhood Search相关宏观变量。
 maxIter = 100
 maxNbIter = 30
 maxNonImpIter = 15
@@ -18,7 +20,7 @@ neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'no
 
 class Task:
     # def __init__(self, location, start_time, end_time, task_demand, service_time):
-    def __init__(self, location, start_time, end_time, task_demand, service_time, w_i, r_mrt):
+    def __init__(self, location, start_time, end_time, task_demand, service_time, w_i):
         self.location = location
         self.startTime = start_time
         self.endTime = end_time
@@ -26,7 +28,7 @@ class Task:
         # self.onRoute = None
         self.serviceTime = service_time
         self.w_i = w_i
-        self.r_mrt = r_mrt
+        self.r_mrt = self.endTime - self.startTime
 
 
 class RouteBuilder:
@@ -580,6 +582,7 @@ class RouteBuilder:
                 print([self.trans_key_to_station(i) for i in r])
         return
 
+    '''
     def get_sol_schedule(self):
         _tasks = []
         for i, r in enumerate(self.best_feas_sol):
@@ -600,8 +603,10 @@ class RouteBuilder:
                     (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
                      self.key2Task[r[j]].demand))
         return _tasks
+    '''
 
     def fix_sol(self, lp):
+        _res = []
         for i, r in enumerate(self.best_feas_sol):
             s_jr = np.zeros(len(r))
             w_jr = np.zeros(len(r))
@@ -631,6 +636,9 @@ class RouteBuilder:
                     load = load + self.key2Task[j].demand
             self.routes_info[i]['current_load'] = load
             for _, j in enumerate(r[1:cur + 1]):
+                _res.append(
+                    (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
+                     self.key2Task[r[j]].demand))
                 self.fixedRoutes[i].append(j)
                 self.fixedKeys.add(j)
                 self.activeKeys.remove(j)
@@ -640,7 +648,7 @@ class RouteBuilder:
             '''
             temp_r = [r[cur], r[-1]]
             self.best_feas_sol[i] = temp_r
-        return
+        return _res
 
 
 if __name__ == '__main__':

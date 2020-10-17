@@ -14,30 +14,34 @@ _vehicle_num = 3
 
 class ChangingRules:
     def __init__(self):
-        self.eventList = EventList()
         self.stations = [Station([20] * 5) for _ in range(10)]
+
+        self.eventList = EventList()
         demands = np.load('demands.npy')
         demands[:, 4] = np.ceil(demands[:, 4] / 10) * 10
-        self.demands = demands.tolist()
+        demands = demands.tolist()
+        for d in demands:
+            self.eventList.add_event(DemandEvent(d[2], d[0], d[3], d[1], d[4], d[5]))
+
         self.charge_schedule = []
         self.routeBuilder = None
         self.station_info = []
+        self.banned_stations = []
 
-    def prepare_event_list(self):
-        for d in self.demands:
-            self.eventList.add_event(DemandEvent(d[2], d[0], d[3], d[1], d[4], d[5]))
-        for c in self.charge_schedule:
-            self.eventList.add_event(ChargeEvent(c[1], c[0], c[2], c[3]))
-
-    def stimulate(self):
+    def stimulate(self, lp):
         for station in self.stations:
             station.clear_state()
         while self.eventList.next_event() is not None:
             next_event = self.eventList.next_event()
-            self.stations[next_event.startPosition - 1].process_event(next_event, self.eventList)
-            self.eventList.remove_event()
+            if next_event.startTime > lp:
+                break
+            else:
+                self.stations[next_event.startPosition - 1].process_event(next_event, self.eventList)
+                self.eventList.remove_event()
 
-    def get_station_info(self, lp, up):
+    '''
+    def get_station_info_by_interval(self, lp, up):
+        self.station_info = []
         for station in self.stations:
             time_labels = list(station.bikesRecord.keys())
             time_labels.sort()
@@ -58,31 +62,65 @@ class ChangingRules:
             if time_labels[-1] < up:
                 time_labels[-1] = up
             self.station_info.append([time_labels, bikes_dist, loss])
+    '''
+
+    def get_station_info_by_moment(self, current_time):
+        self.station_info = []
+        for station in self.stations:
+            time_labels = list(station.bikesRecord.keys())
+            time_labels.sort()
+            t_label = current_time
+            for _, t in enumerate(time_labels):
+                if t <= current_time:
+                    t_label = t
+                else:
+                    break
+            bikes_dist = [station.bikesRecord[t_label][bl * 10] for bl in range(11)]
+            loss = station.loss[t_label]
+            self.station_info.append([[t_label], [bikes_dist], [loss]])
 
     def prepare_route_builder(self):
         self.routeBuilder = RouteBuilder(_dis_mat, _t_mat)
         self.routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
-                                          [3600] * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
+                                          [3600] * _vehicle_num,
+                                          [200] * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
 
-    def produce_tasks(self, lp, up):
-        # 引入ban list
+    def produce_tasks(self, *args):
         _tasks = []
         for i, info in enumerate(self.station_info):
-            _task = self.rule_1(info, lp, up)
+            if i in self.banned_stations:
+                continue
+            _task = self.rule_2(info)
             if _task:
                 _tasks.append((i + 1,) + _task)
         _tasks = list(zip(*_tasks))
-        self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4])
-        self.routeBuilder.build_initial_solution()
+        # location, start_time, end_time, task_demand, service_time, w_i
+        self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _task[5])
+        # self.routeBuilder.build_initial_solution()
         # self.routeBuilder.multiple_neighborhood_search()
 
-    def get_routed_result(self):
-        _tasks = self.routeBuilder.get_sol_schedule()
-        self.charge_schedule.extend(_tasks)
+    def get_routed_result(self, lp):
+        _res = self.routeBuilder.fix_sol(lp)
+        self.charge_schedule.extend(_res)
+        for c in _res:
+            self.eventList.add_event(ChargeEvent(c[1], c[0], c[2], c[3]))
+        return
+
+    def get_banned_stations(self):
+        self.banned_stations = []
+        for key in self.routeBuilder.activeKeys:
+            self.banned_stations.append(self.routeBuilder.trans_key_to_station(key) - 1)
+        return
+
+    def update_existed_tasks(self, *args):
+        self.get_banned_stations()
+        for key in self.routeBuilder.activeKeys:
+            info = self.station_info[self.routeBuilder.trans_key_to_station(key) - 1]
+            # 利用info更新task
         return
 
     @classmethod
-    def rule_1(cls, info, lp, up):
+    def rule_1(cls, info):
         # rule1在一个站点低于30%电量车达到一定数量后产生时间窗下限，在损失达到一定值后产生上限。
         time_labels, bikes_num_info, loss_info = info
         s_t = None
@@ -105,15 +143,28 @@ class ChangingRules:
         else:
             return ()
 
+    @classmethod
+    def rule_2(cls, info):
+        return ()
+
 
 if __name__ == '__main__':
     changingRules = ChangingRules()
     changingRules.prepare_route_builder()
-    changingRules.prepare_event_list()
-    changingRules.stimulate()
-    changingRules.get_station_info(0, 3600)
-    changingRules.produce_tasks(0, 3600)
-    changingRules.get_routed_result()
-    changingRules.prepare_event_list()
-    changingRules.stimulate()
-    print()
+    _current_time = 0
+    _anticipation_horizon = 600
+    _num_time_slices = 6
+    for _ts in range(_num_time_slices):
+        _current_time = _current_time + _ts * _anticipation_horizon
+        # 获取当前时刻的状态
+        changingRules.stimulate(_current_time)
+        # 发送这个时刻得到的，截止到下一个anticipation cihorizon之前的计划
+        # 同时让routeBuilder的状态更新到下一个anticipation horizon开始前的状态
+        changingRules.get_routed_result(_current_time + _anticipation_horizon)
+
+        changingRules.get_station_info_by_moment(_current_time)
+        changingRules.update_existed_tasks()
+        changingRules.produce_tasks()
+
+        changingRules.routeBuilder.build_initial_solution()
+        changingRules.routeBuilder.multiple_neighborhood_search()
