@@ -17,33 +17,35 @@ neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'no
 
 
 class Task:
-    def __init__(self, location, start_time, end_time, task_demand, service_time):
-        # def __init__(self, location, start_time, end_time, task_demand, service_time, w_i, r_mrt):
-        # self.w_i = w_i
-        # self.r_mrt = r_mrt
+    # def __init__(self, location, start_time, end_time, task_demand, service_time):
+    def __init__(self, location, start_time, end_time, task_demand, service_time, w_i, r_mrt):
         self.location = location
         self.startTime = start_time
         self.endTime = end_time
         self.demand = task_demand
         # self.onRoute = None
         self.serviceTime = service_time
+        self.w_i = w_i
+        self.r_mrt = r_mrt
 
 
 class RouteBuilder:
     def __init__(self, distance_matrix, time_matrix):
         self.c_ij = distance_matrix
         self.t_ij = time_matrix
-        self.fixedKeys = []
-        self.activeKeys = []
+
+        self.fixedKeys = set()
+        self.activeKeys = set()
         self.key2Task = {}
         self.routes = []
         self.fixedRoutes = []
         self.routes_info = []
-        self.infFactor = 1.1
+
         self.banList = []
         self.best_feas_sol = None
         self.best_feas_obj = None
         self.last_sol_obj = None
+        self.infFactor = 1.1
 
     @classmethod
     def copy_routes(cls, a):
@@ -65,10 +67,13 @@ class RouteBuilder:
         for _task_param in zip(*args):
             start_key = start_key + 1
             task = Task(*_task_param)
-            self.activeKeys.append(start_key)
+            self.activeKeys.add(start_key)
             self.key2Task[start_key] = task
 
     def trans_key_to_station(self, key):
+        """
+        把任务的key翻译成对应的节点。
+        """
         if key < 0:
             return 0
         elif key < self.c_ij.shape[0]:
@@ -76,32 +81,75 @@ class RouteBuilder:
         else:
             return self.key2Task[key].location
 
-    def evaluate_solution(self, routes):
+    def evaluate_solution(self, routes, tour_id):
+        """
+        To do:
+        改掉evaluate_solution_by_time_func_of_task()。
+        """
+        return self.evaluate_solution_by_time_func_of_task(routes, tour_id)
+
+    def evaluate_solution_by_total_distance(self, routes):
+        """
+        以所有路径总长度之和作为目标函数，返回routes的Obj。
+        返回舍入到一位小数后的值。
+        """
         total_dis = 0
         for r in routes:
             for i in range(0, len(r) - 1):
                 total_dis = total_dis + self.c_ij[self.trans_key_to_station(r[i]), self.trans_key_to_station(r[i + 1])]
         return round(total_dis, 1)
 
-    def evaluate_solution_by_time_func_of_task(self, routes, tour_id, func):
+    def evaluate_solution_by_time_func_of_task(self, routes, tour_id):
+        """
+        计算出routes中每个任务的到达时间，然后依据func计算每个任务的目标函数值。
+        然后相加，作为routes的Obj。
+        To do：
+        是否增加舍入。
+        """
         total_ob = 0
         for i, r in enumerate(routes):
             current_time = self.routes_info[tour_id[i]]['current_time'] - self.get_service_time(r[0])
-            for j in range(0, len(r) - 2):
+            for j in range(0, len(r) - 1):
                 current_time = current_time + self.get_service_time(r[j]) + self.t_ij[
                     self.trans_key_to_station(r[j]), self.trans_key_to_station(r[j + 1])]
-                total_ob = total_ob + func(r[j + 1], current_time)
+                total_ob = total_ob + self.quadratic_response_time_cost_of_task(r[j + 1], current_time)
         return total_ob
 
     def quadratic_response_time_cost_of_task(self, task_key, task_arrive_time):
-        _task = self.key2Task[task_key]
-        return _task.w_i * (task_arrive_time / _task.r_mrt) ^ 2
+        """
+        以二次函数计算task的response time导致的惩罚。
+        To do:
+        是否加上超时产生的penalty
+        """
+        if task_key >= self.c_ij.shape[0]:
+            _task = self.key2Task[task_key]
+            _t_i = task_arrive_time - _task.startTime
+            return _task.w_i * (_t_i / _task.r_mrt) ^ 2
+        else:
+            return 0
+
+    def linear_response_time_cost_of_task(self, task_key, task_arrive_time):
+        """
+        以线性函数计算task的response time导致的惩罚
+        To do：
+        是否加上超时产生的penalty
+        """
+        if task_key >= self.c_ij.shape[0]:
+            _task = self.key2Task[task_key]
+            _t_i = task_arrive_time - _task.startTime
+            return _task.w_i / _task.r_mrt * (min(_t_i, _task.r_mrt) + 2 * max(0, _t_i - _task.r_mrt))
+        else:
+            return 0
 
     def get_feasibility(self, routes, tour_id):
+        """
+        用于检查路径是否feasible，总是传入一个路径列表,输出对应长度的feasibility列表。
+        """
         return [all(f_col) for f_col in
                 zip(self.get_load_feasibility(routes, tour_id), self.get_time_window_feasibility(routes, tour_id))]
 
     def get_period_upper_bound_feasibility(self, routes, tour_id):
+        t_feas = []
         for i, r in enumerate(routes):
             period = self.routes_info[tour_id[i]]['time_ub']
             total_time = self.routes_info[tour_id[i]]['current_time']
@@ -109,8 +157,10 @@ class RouteBuilder:
                 total_time = total_time + self.t_ij[
                     self.trans_key_to_station(r[j]), self.trans_key_to_station(r[j + 1])]
             if total_time > period:
-                return False
-        return True
+                t_feas.append(False)
+            else:
+                t_feas.append(True)
+        return t_feas
 
     def get_time_window_feasibility(self, routes, tour_id):
         t_feas = []
@@ -129,7 +179,7 @@ class RouteBuilder:
                     s_jr[j] = self.get_tw_lb(r[j])
                 else:
                     w_jr[j] = 0
-            for j, _ in enumerate(r):
+            for j in range(1, len(r)):
                 if s_jr[j] > self.get_tw_ub(r[j]):
                     t_f = False
             if s_jr[-1] > period:
@@ -185,7 +235,7 @@ class RouteBuilder:
                     for j in range(1, len(sol[num_tour])):
                         sigma_1 = sol[num_tour][:j]
                         sigma_2 = sol[num_tour][j:]
-                        obj = self.evaluate_solution([sigma_1 + [i] + sigma_2])
+                        obj = self.evaluate_solution([sigma_1 + [i] + sigma_2], [num_tour])
                         f = all(self.get_feasibility([sigma_1 + [i] + sigma_2], [num_tour]))
                         if obj < best_sol and f:
                             move = (i, j)
@@ -212,9 +262,12 @@ class RouteBuilder:
                             if sol[num_tour][j - 1] != satellite and sol[num_tour][j] != satellite:
                                 sigma_1 = sol[num_tour][:j]
                                 sigma_2 = sol[num_tour][j:]
-                                add_obj = self.evaluate_solution([sigma_1 + [satellite] + sigma_2])
+                                add_obj = self.evaluate_solution([sigma_1 + [satellite] + sigma_2], [num_tour])
+                                # To do:
+                                # 这里需要合理选择
                                 add_f = all(
-                                    self.get_time_window_feasibility([sigma_1 + [satellite] + sigma_2], [num_tour]))
+                                    self.get_period_upper_bound_feasibility([sigma_1 + [satellite] + sigma_2],
+                                                                            [num_tour]))
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
@@ -228,9 +281,9 @@ class RouteBuilder:
                             insertion_allowed = False
             num_tour = num_tour + 1
         self.routes = self.copy_routes(sol)
-        self.banList.append(self.evaluate_solution(self.routes))
+        self.banList.append(self.evaluate_solution(self.routes, list(range(len(self.routes)))))
         self.best_feas_sol = self.copy_routes(self.routes)
-        self.best_feas_obj = self.evaluate_solution(self.best_feas_sol)
+        self.best_feas_obj = self.evaluate_solution(self.best_feas_sol, list(range(len(self.routes))))
         self.last_sol_obj = self.best_feas_obj
 
     # 关于infFactor
@@ -247,7 +300,7 @@ class RouteBuilder:
 
     def node_relocation(self):
         routes = self.copy_routes(self.routes)
-        S_sol = self.evaluate_solution(routes)
+        S_sol = self.evaluate_solution(routes, range(len(routes)))
         r_feas = self.get_feasibility(routes, range(len(routes)))
         bestSol = float('inf')
         saveMove = None
@@ -255,10 +308,10 @@ class RouteBuilder:
 
         for i in range(len(routes)):
             route_i = routes[i]
-            S_i = self.evaluate_solution([route_i])
+            S_i = self.evaluate_solution([route_i], [i])
             for j in range(len(routes)):
                 route_j = routes[j]
-                S_j = self.evaluate_solution([route_j])
+                S_j = self.evaluate_solution([route_j], [j])
                 for k in range(1, len(route_i) - 1):
                     sigma_1 = route_i[0:k]
                     sigma_2 = route_i[k:k + 1]
@@ -267,8 +320,8 @@ class RouteBuilder:
                         sigma_4 = route_j[0:l + 1]
                         sigma_5 = route_j[l + 1:]
                         if i != j:
-                            obj = self.evaluate_solution([sigma_1 + sigma_3])
-                            obj = obj + self.evaluate_solution([sigma_4 + sigma_2 + sigma_5])
+                            obj = self.evaluate_solution([sigma_1 + sigma_3], [i])
+                            obj = obj + self.evaluate_solution([sigma_4 + sigma_2 + sigma_5], [j])
                             obj = obj + S_sol - S_i - S_j
                             obj = round(obj, 1)
                             r_feas_temp = r_feas.copy()
@@ -282,7 +335,7 @@ class RouteBuilder:
                                 sigma_5.remove(route_i[k])
                             else:
                                 sigma_4.remove(route_i[k])
-                            obj = self.evaluate_solution([sigma_4 + sigma_2 + sigma_5])
+                            obj = self.evaluate_solution([sigma_4 + sigma_2 + sigma_5], [i])
                             obj = obj + S_sol - S_i
                             obj = round(obj, 1)
                             r_feas_temp = r_feas.copy()
@@ -320,7 +373,7 @@ class RouteBuilder:
 
     def nodes_swap(self):
         routes = self.copy_routes(self.routes)
-        S_sol = self.evaluate_solution(routes)
+        S_sol = self.evaluate_solution(routes, range(len(routes)))
         r_feas = self.get_feasibility(routes, range(len(routes)))
         bestSol = float('inf')
         saveMove = None
@@ -328,16 +381,16 @@ class RouteBuilder:
 
         for i in range(len(routes)):
             route_i = routes[i].copy()
-            S_i = self.evaluate_solution([route_i])
+            S_i = self.evaluate_solution([route_i], [i])
             for j in range(i, len(routes)):
                 route_j = routes[j].copy()
-                S_j = self.evaluate_solution([route_j])
+                S_j = self.evaluate_solution([route_j], [j])
                 for k in range(1, len(route_i) - 1):
                     for l in range(1, len(route_j) - 1):
                         if route_i[k] != route_j[l]:
                             route_i[k], route_j[l] = route_j[l], route_i[k]
-                            obj = self.evaluate_solution([route_i])
-                            obj = obj + self.evaluate_solution([route_j])
+                            obj = self.evaluate_solution([route_i], [i])
+                            obj = obj + self.evaluate_solution([route_j], [j])
                             obj = obj + S_sol - S_i - S_j
                             obj = round(obj, 1)
                             r_feas_temp = r_feas.copy()
@@ -364,21 +417,21 @@ class RouteBuilder:
     def intra_route_2opt(self):
         routes = self.copy_routes(self.routes)
         r_feas = self.get_feasibility(routes, range(len(routes)))
-        S_sol = self.evaluate_solution(routes)
+        S_sol = self.evaluate_solution(routes, range(len(routes)))
         bestSol = float('inf')
         saveMove = None
         savef = False
 
         for i in range(len(routes)):
             route_i = routes[i]
-            S_i = self.evaluate_solution([route_i])
+            S_i = self.evaluate_solution([route_i], [i])
             for k in range(1, len(route_i) - 3):
                 for l in range(k + 2, len(route_i) - 1):  # 交换的是点k到点l,且把这种方式与swap区分开来了
                     sigma_1 = route_i[0:k]
                     sigma_2 = route_i[k:l + 1]
                     sigma_2.reverse()
                     sigma_3 = route_i[l + 1:]
-                    obj = self.evaluate_solution([sigma_1 + sigma_2 + sigma_3])
+                    obj = self.evaluate_solution([sigma_1 + sigma_2 + sigma_3], [i])
                     obj = obj + S_sol - S_i
                     obj = round(obj, 1)
                     r_feas_temp = r_feas.copy()
@@ -407,25 +460,25 @@ class RouteBuilder:
     def inter_routes_2opt(self):
         routes = self.copy_routes(self.routes)
         r_feas = self.get_feasibility(routes, range(len(routes)))
-        S_sol = self.evaluate_solution(routes)
+        S_sol = self.evaluate_solution(routes, range(len(routes)))
         bestSol = float('inf')
         saveMove = None
         savef = False
 
         for i in range(len(routes)):
             route_i = routes[i]
-            S_i = self.evaluate_solution([route_i])
+            S_i = self.evaluate_solution([route_i], [i])
             for j in range(i + 1, len(routes)):
                 route_j = routes[j]
-                S_j = self.evaluate_solution([route_j])
+                S_j = self.evaluate_solution([route_j], [j])
                 for k in range(len(route_i) - 1):
                     sigma_1 = route_i[0:k + 1]
                     sigma_2 = route_i[k + 1:]
                     for l in range(len(route_j) - 1):
                         sigma_3 = route_j[0:l + 1]
                         sigma_4 = route_j[l + 1:]
-                        obj = self.evaluate_solution([sigma_1 + sigma_4])
-                        obj = obj + self.evaluate_solution([sigma_3 + sigma_2])
+                        obj = self.evaluate_solution([sigma_1 + sigma_4], [i])
+                        obj = obj + self.evaluate_solution([sigma_3 + sigma_2], [j])
                         obj = obj + S_sol - S_i - S_j
                         obj = round(obj, 1)
                         r_feas_temp = r_feas.copy()
@@ -481,20 +534,21 @@ class RouteBuilder:
                     neighbor = self.get_neighborhood(nh)  # neighbor的组成为路径、是否可行、是否有所改善
                     self.routes = neighbor[0]
                     # update banlist
-                    self.banList.append(self.evaluate_solution(self.routes))
+                    self.banList.append(self.evaluate_solution(self.routes, range(len(self.routes))))
                     # update infFactor
-                    self.last_sol_obj = self.evaluate_solution(self.routes) if neighbor[
-                        1] else round(self.evaluate_solution(self.routes) * self.infFactor, 1)
+                    self.last_sol_obj = self.evaluate_solution(self.routes, range(len(self.routes))) if neighbor[
+                        1] else round(self.evaluate_solution(self.routes, range(len(self.routes))) * self.infFactor, 1)
                     if neighbor[1]:
                         self.update_inf_factor(-1)
                     else:
                         self.update_inf_factor(1)
                     if neighbor[2]:
                         if neighbor[1]:
-                            if self.evaluate_solution(self.routes) <= self.best_feas_obj - 0.1:
+                            if self.evaluate_solution(self.routes, range(len(self.routes))) <= self.best_feas_obj - 0.1:
                                 print('Found A Better Solution')
                                 self.best_feas_sol = self.copy_routes(self.routes)
-                                self.best_feas_obj = self.evaluate_solution(self.best_feas_sol)
+                                self.best_feas_obj = self.evaluate_solution(self.best_feas_sol,
+                                                                            range(len(self.best_feas_sol)))
                                 ImpIter = True
                             if all(self.get_feasibility(self.best_feas_sol, range(25))) is False:
                                 print('The New Best Solution is Infeasible')
@@ -517,6 +571,10 @@ class RouteBuilder:
             print('Iter', it)
 
     def print_sol(self):
+        """
+        To do:
+        是否打印fixed routes。
+        """
         for r in self.best_feas_sol:
             if len(r) > 2:
                 print([self.trans_key_to_station(i) for i in r])
@@ -574,9 +632,12 @@ class RouteBuilder:
             self.routes_info[i]['current_load'] = load
             for _, j in enumerate(r[1:cur + 1]):
                 self.fixedRoutes[i].append(j)
-                self.fixedKeys.append(j)
+                self.fixedKeys.add(j)
+                self.activeKeys.remove(j)
+            '''
             for _, j in enumerate(r[cur + 1:-1]):
                 del self.key2Task[j]
+            '''
             temp_r = [r[cur], r[-1]]
             self.best_feas_sol[i] = temp_r
         return

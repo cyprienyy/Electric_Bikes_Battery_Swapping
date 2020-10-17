@@ -14,5 +14,7 @@
 
 - [ ] 创建rule
 
-- [ ] ...
+- [ ] Routebuilder的get_feasibility()需要更改
+
+- [ ] Routebuilder的build_initial_solution需要更改获取可行性方面的函数。
 
