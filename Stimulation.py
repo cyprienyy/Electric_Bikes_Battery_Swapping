@@ -3,6 +3,8 @@ from collections import Counter, defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 
+BATTERY_LEVEL = list(range(0, 110, 10))
+
 
 class Event:
     def __init__(self, start_time, start_position):
@@ -132,7 +134,7 @@ class Station:
         bikes_counter = Counter(out_bikes[0:num_change])
         self.numBikes.subtract(bikes_counter)
         self.onsiteVehicles.subtract(battery_counter)
-        self.numBikes[100] += num_change
+        self.numBikes[-1] += num_change
 
     def record(self, current_time):
         self.bikesRecord[current_time] = Counter(self.numBikes)
@@ -140,7 +142,7 @@ class Station:
     def show_record(self):
         time_labels = list(self.bikesRecord.keys())
         time_labels.sort()
-        bikes_dist = [[self.bikesRecord[t][bl * 10] for bl in range(11)] for t in time_labels]
+        bikes_dist = [[self.bikesRecord[t][bl] for bl in BATTERY_LEVEL] for t in time_labels]
         bikes_dist = np.array(bikes_dist)
         plt_label = -10
         plt.rcParams['font.sans-serif'] = ['SimHei']
@@ -162,6 +164,9 @@ class Station:
         self.numBikes = Counter(self.bikesRecord[0])
         self.bikesRecord = defaultdict(Counter)
         self.record(0)
+
+    def count_loss(self):
+        return sum(self.loss.values())
 
 
 if __name__ == '__main__':

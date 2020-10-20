@@ -1,3 +1,3 @@
-import numpy as np
-
-print(np.load('demands_1.npy'))
+a = {1,2}
+for i in a:
+    print(i)

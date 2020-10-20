@@ -1,5 +1,6 @@
-from Stimulation import *
+from Stimulation import Station, EventList, BATTERY_LEVEL, DemandEvent, ChargeEvent
 from Routes import RouteBuilder
+import numpy as np
 
 # 在这里设置好_dis_mat, _t_mat, _capacity, _vehicle_num
 file_path = r'.\dm.npy'
@@ -96,8 +97,6 @@ class ChangingRules:
         # location, start_time, end_time, task_demand, service_time, w_i
         if _tasks:
             self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5])
-        # self.routeBuilder.build_initial_solution()
-        # self.routeBuilder.multiple_neighborhood_search()
 
     def get_routed_result(self, lp):
         _res = self.routeBuilder.fix_sol(lp)
@@ -108,7 +107,8 @@ class ChangingRules:
 
     def get_banned_stations(self):
         self.banned_stations = []
-        for key in self.routeBuilder.activeKeys:
+        print(self.routeBuilder.activeKeys)
+        for key in list(self.routeBuilder.activeKeys):
             self.banned_stations.append(self.routeBuilder.trans_key_to_station(key) - 1)
         return
 
@@ -116,9 +116,11 @@ class ChangingRules:
         self.get_banned_stations()
         for key in self.routeBuilder.activeKeys:
             info = self.station_info[self.routeBuilder.trans_key_to_station(key) - 1]
-            # 利用info更新task
+            new_task_demand = self.rule_3(info)
+            self.routeBuilder.key2Task[key].task_demand = new_task_demand
         return
 
+    '''
     @classmethod
     def rule_1(cls, info):
         # rule1在一个站点低于30%电量车达到一定数量后产生时间窗下限，在损失达到一定值后产生上限。
@@ -142,10 +144,22 @@ class ChangingRules:
             return s_t, e_t, de, ser_t
         else:
             return ()
+    '''
 
     @classmethod
     def rule_2(cls, info):
-        return ()
+        # rule2用于产生换电任务
+        time_label, bikes_num_info, loos_info = info
+        if sum(bikes_num_info[0][0:3]) >= 3:
+            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:3]), 180, 1
+        else:
+            return None
+
+    @classmethod
+    def rule_3(cls, info):
+        # rule3用于更新换电的demand
+        _, bikes_num_info, _ = info
+        return sum(bikes_num_info[0][0:3])
 
 
 if __name__ == '__main__':
@@ -158,9 +172,6 @@ if __name__ == '__main__':
         _current_time = _current_time + _ts * _anticipation_horizon
         # 获取当前时刻的状态
         changingRules.stimulate(_current_time)
-        # 发送这个时刻得到的，截止到下一个anticipation horizon之前的计划
-        # 同时让routeBuilder的状态更新到下一个anticipation horizon开始前的状态
-        changingRules.get_routed_result(_current_time + _anticipation_horizon)
 
         changingRules.get_station_info_by_moment(_current_time)
         changingRules.update_existed_tasks()
@@ -168,3 +179,7 @@ if __name__ == '__main__':
 
         changingRules.routeBuilder.build_initial_solution()
         changingRules.routeBuilder.multiple_neighborhood_search()
+
+        # 发送这个时刻得到的，截止到下一个anticipation horizon之前的计划
+        # 同时让routeBuilder的状态更新到下一个anticipation horizon开始前的状态
+        changingRules.get_routed_result(_current_time + _anticipation_horizon)

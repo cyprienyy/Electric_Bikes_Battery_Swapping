@@ -47,11 +47,16 @@ if __name__ == '__main__':
     routeBuilder = RouteBuilder(_dis_mat, _dis_mat)
     routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                  [_t_win[0, 1]] * _vehicle_num, [200] * _vehicle_num)
-    routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:])
+    routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:], [1]*25)
     routeBuilder.build_initial_solution()
+    print(routeBuilder.get_feasibility(routeBuilder.routes, range(3)))
     routeBuilder.print_sol()
-    '''
+    print(routeBuilder.get_sol_schedule())
     print(routeBuilder.best_feas_obj)
+    routeBuilder.multiple_neighborhood_search()
+    routeBuilder.print_sol()
+    print(routeBuilder.best_feas_obj)
+    '''
     print(routeBuilder.best_feas_sol)
     print('------------------')
     routeBuilder.multiple_neighborhood_search()
@@ -60,6 +65,5 @@ if __name__ == '__main__':
     print(routeBuilder.best_feas_sol)
     print('++++++++++++++++++')
     '''
-    print(routeBuilder.get_sol_schedule())
-    routeBuilder.fix_sol(101)
+    print(routeBuilder.fix_sol(101))
     print('finished')

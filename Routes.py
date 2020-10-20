@@ -88,7 +88,7 @@ class RouteBuilder:
         To do:
         改掉evaluate_solution_by_time_func_of_task()。
         """
-        return self.evaluate_solution_by_time_func_of_task(routes, tour_id)
+        return round(self.evaluate_solution_by_time_func_of_task(routes, tour_id), 1)
 
     def evaluate_solution_by_total_distance(self, routes):
         """
@@ -126,7 +126,7 @@ class RouteBuilder:
         if task_key >= self.c_ij.shape[0]:
             _task = self.key2Task[task_key]
             _t_i = task_arrive_time - _task.startTime
-            return _task.w_i * (_t_i / _task.r_mrt) ^ 2
+            return _task.w_i * (_t_i / _task.r_mrt) ** 2
         else:
             return 0
 
@@ -148,7 +148,8 @@ class RouteBuilder:
         用于检查路径是否feasible，总是传入一个路径列表,输出对应长度的feasibility列表。
         """
         return [all(f_col) for f_col in
-                zip(self.get_load_feasibility(routes, tour_id), self.get_time_window_feasibility(routes, tour_id))]
+                zip(self.get_load_feasibility(routes, tour_id),
+                    self.get_period_upper_bound_feasibility(routes, tour_id))]
 
     def get_period_upper_bound_feasibility(self, routes, tour_id):
         t_feas = []
@@ -224,6 +225,7 @@ class RouteBuilder:
         return l_feas
 
     def build_initial_solution(self):
+        self.banList = []
         unassigned_nodes = self.activeKeys.copy()
         add_move = None
         num_tour = 0
@@ -370,7 +372,6 @@ class RouteBuilder:
                 else:
                     sigma_4.remove(routes[i][k])
                 routes[i] = sigma_4 + sigma_2 + sigma_5
-            print(bestSol, S_sol, self.banList[-1])
         return routes, savef, bestSol < self.last_sol_obj
 
     def nodes_swap(self):
@@ -390,15 +391,26 @@ class RouteBuilder:
                 for k in range(1, len(route_i) - 1):
                     for l in range(1, len(route_j) - 1):
                         if route_i[k] != route_j[l]:
-                            route_i[k], route_j[l] = route_j[l], route_i[k]
-                            obj = self.evaluate_solution([route_i], [i])
-                            obj = obj + self.evaluate_solution([route_j], [j])
-                            obj = obj + S_sol - S_i - S_j
-                            obj = round(obj, 1)
-                            r_feas_temp = r_feas.copy()
-                            r_feas_update = self.get_feasibility([route_i, route_j], [i, j])
-                            r_feas_temp[i] = r_feas_update[0]
-                            r_feas_temp[j] = r_feas_update[1]
+                            if i != j:
+                                route_i[k], route_j[l] = route_j[l], route_i[k]
+                                obj = self.evaluate_solution([route_i], [i])
+                                obj = obj + self.evaluate_solution([route_j], [j])
+                                obj = obj + S_sol - S_i - S_j
+                                obj = round(obj, 1)
+                                r_feas_temp = r_feas.copy()
+                                r_feas_update = self.get_feasibility([route_i, route_j], [i, j])
+                                r_feas_temp[i] = r_feas_update[0]
+                                r_feas_temp[j] = r_feas_update[1]
+                                route_i[k], route_j[l] = route_j[l], route_i[k]
+                            else:
+                                route_i[k], route_i[l] = route_i[l], route_i[k]
+                                obj = self.evaluate_solution([route_i], [i])
+                                obj = obj + S_sol - S_i
+                                obj = round(obj, 1)
+                                r_feas_temp = r_feas.copy()
+                                r_feas_update = self.get_feasibility([route_i], [i])
+                                r_feas_temp[i] = r_feas_update[0]
+                                route_i[k], route_i[l] = route_i[l], route_i[k]
                             f = all(r_feas_temp)
                             if obj not in self.banList:
                                 if not f:
@@ -413,7 +425,9 @@ class RouteBuilder:
             j = saveMove[2]
             l = saveMove[3]
             routes[i][k], routes[j][l] = routes[j][l], routes[i][k]
+            print('++')
             print(bestSol, S_sol, self.banList[-1])
+            print(self.evaluate_solution(routes, range(len(routes))))
         return routes, savef, bestSol < self.last_sol_obj
 
     def intra_route_2opt(self):
@@ -456,7 +470,6 @@ class RouteBuilder:
             sigma_2.reverse()
             sigma_3 = routes[i][l + 1:]
             routes[i] = sigma_1 + sigma_2 + sigma_3
-            print(bestSol, S_sol, self.banList[-1])
         return routes, savef, bestSol < self.last_sol_obj
 
     def inter_routes_2opt(self):
@@ -506,7 +519,6 @@ class RouteBuilder:
             sigma_4 = routes[j][l + 1:]
             routes[i] = sigma_1 + sigma_4
             routes[j] = sigma_3 + sigma_2
-            print(bestSol, S_sol, self.banList[-1])
         return routes, savef, bestSol < self.last_sol_obj
 
     def get_neighborhood(self, neighborhood_index):
@@ -530,7 +542,7 @@ class RouteBuilder:
         for it in range(maxIter):
             ImpIter = False
             for nh in neighborhoods:
-                print('nh', nh)
+                # print('nh', nh)
                 NbNonImpIter = 0
                 for Nbit in range(maxNbIter):
                     neighbor = self.get_neighborhood(nh)  # neighbor的组成为路径、是否可行、是否有所改善
@@ -540,6 +552,7 @@ class RouteBuilder:
                     # update infFactor
                     self.last_sol_obj = self.evaluate_solution(self.routes, range(len(self.routes))) if neighbor[
                         1] else round(self.evaluate_solution(self.routes, range(len(self.routes))) * self.infFactor, 1)
+                    # print('++', self.last_sol_obj, self.infFactor)
                     if neighbor[1]:
                         self.update_inf_factor(-1)
                     else:
@@ -556,7 +569,7 @@ class RouteBuilder:
                                 print('The New Best Solution is Infeasible')
                     else:
                         NbNonImpIter = NbNonImpIter + 1
-                        print('NbNonImpIter', NbNonImpIter)
+                        # print('NbNonImpIter', NbNonImpIter)
                     if NbNonImpIter >= maxNbNonImpIter:
                         self.routes = self.copy_routes(self.best_feas_sol)
                         self.last_sol_obj = self.best_feas_obj
@@ -567,10 +580,10 @@ class RouteBuilder:
                 self.last_sol_obj = self.best_feas_obj
             if ImpIter is False:
                 NonImpIter = NonImpIter + 1
-                print('NonImpIter', NonImpIter)
+                # print('NonImpIter', NonImpIter)
             if NonImpIter >= maxNonImpIter:
                 break
-            print('Iter', it)
+            # print('Iter', it)
 
     def print_sol(self):
         """
@@ -582,7 +595,6 @@ class RouteBuilder:
                 print([self.trans_key_to_station(i) for i in r])
         return
 
-    '''
     def get_sol_schedule(self):
         _tasks = []
         for i, r in enumerate(self.best_feas_sol):
@@ -599,11 +611,11 @@ class RouteBuilder:
                 else:
                     w_jr[j] = 0
             for j in range(1, len(r) - 1):
-                _tasks.append(
-                    (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
-                     self.key2Task[r[j]].demand))
+                if r[j] in self.activeKeys:
+                    _tasks.append(
+                        (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
+                         self.key2Task[r[j]].demand))
         return _tasks
-    '''
 
     def fix_sol(self, lp):
         _res = []
@@ -635,10 +647,10 @@ class RouteBuilder:
                 else:
                     load = load + self.key2Task[j].demand
             self.routes_info[i]['current_load'] = load
-            for _, j in enumerate(r[1:cur + 1]):
+            for k, j in enumerate(r[1:cur + 1]):
                 _res.append(
-                    (self.trans_key_to_station(r[j]), s_jr[j], s_jr[j] + w_jr[j + 1] + self.get_service_time(r[j]),
-                     self.key2Task[r[j]].demand))
+                    (self.trans_key_to_station(j), s_jr[k + 1], s_jr[k + 1] + w_jr[k + 2] + self.get_service_time(j),
+                     self.key2Task[j].demand))
                 self.fixedRoutes[i].append(j)
                 self.fixedKeys.add(j)
                 self.activeKeys.remove(j)
