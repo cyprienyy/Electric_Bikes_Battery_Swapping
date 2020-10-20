@@ -1,15 +1,14 @@
-import numpy as np
 from Stimulation import *
-from Routes import Task, RouteBuilder
-from Read_Files import read_single_soloman, resolve_soloman
+from Routes import RouteBuilder
 
 # 在这里设置好_dis_mat, _t_mat, _capacity, _vehicle_num
-file_path = r'.\solomon_25\C102.txt'
-_info, _mat = read_single_soloman(file_path)
-_vehicle_num, _capacity, _dis_mat, _, _, _ = resolve_soloman(_info, _mat)
-_dis_mat = np.around(_dis_mat, 1)
-_t_mat = _dis_mat
-_vehicle_num = 3
+file_path = r'.\dm.npy'
+_dis_mat = np.load(file_path)
+_dis_mat = _dis_mat.astype(int)
+_t_mat = _dis_mat / 250 * 60
+_t_mat = np.around(_t_mat, 0).astype(int)
+_vehicle_num = 2
+_vehicle_capacity = 200
 
 
 class ChangingRules:
@@ -95,7 +94,8 @@ class ChangingRules:
                 _tasks.append((i + 1,) + _task)
         _tasks = list(zip(*_tasks))
         # location, start_time, end_time, task_demand, service_time, w_i
-        self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _task[5])
+        if _tasks:
+            self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5])
         # self.routeBuilder.build_initial_solution()
         # self.routeBuilder.multiple_neighborhood_search()
 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
         _current_time = _current_time + _ts * _anticipation_horizon
         # 获取当前时刻的状态
         changingRules.stimulate(_current_time)
-        # 发送这个时刻得到的，截止到下一个anticipation cihorizon之前的计划
+        # 发送这个时刻得到的，截止到下一个anticipation horizon之前的计划
         # 同时让routeBuilder的状态更新到下一个anticipation horizon开始前的状态
         changingRules.get_routed_result(_current_time + _anticipation_horizon)
 
