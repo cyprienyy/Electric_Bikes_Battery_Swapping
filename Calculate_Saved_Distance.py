@@ -1,5 +1,7 @@
 import numpy as np
 
+c_ij = np.random.randint(0, 5, size=(9, 9))
+
 
 def get_feasibility_of_balance_route(q_i, route, capacity, tw_required):
     """
@@ -72,6 +74,99 @@ def get_most_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i,
     return backtracking_best_combination(skip_plans_by_route, battery_change_route)
 
 
+def get_greedy_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i, capacity):
+    # To do:
+    # 更新返回新的要去除的点的方式
+    distance_saved = np.zeros(len(battery_change_route), np.int32)
+    for i, loc in enumerate(battery_change_route):
+        if loc != 0:
+            distance_saved[i] = c_ij[battery_change_route[i - 1], loc] + c_ij[loc, battery_change_route[i + 1]]
+        else:
+            distance_saved[i] = 0
+
+    balance_routes_feasibility = []
+    balance_routes_load = []
+    for b_r in balance_routes:
+        temp_q_i = []
+        temp_a_i = []
+        temp_b_i = []
+        for loc in b_r:
+            temp_q_i.append(q_i[loc])
+            temp_a_i.append(a_i[loc])
+            temp_b_i.append(b_i[loc])
+        b_r_feas, b_r_load = get_feasibility_of_balance_route(temp_q_i, b_r, capacity, True)
+        if b_r_feas:
+            balance_routes_feasibility.append(True)
+            theta_0_tmp = 0
+            theta_1_tmp = b_r_load[1]
+            balance_routes_load.append([(theta_0_tmp, theta_1_tmp)])
+            for j in range(1, len(b_r)):
+                theta_sum_tmp = theta_0_tmp + theta_1_tmp + temp_q_i[j]
+                theta_1_tmp = theta_1_tmp + min(temp_q_i[j] + theta_0_tmp, temp_a_i[j])
+                theta_0_tmp = theta_sum_tmp - theta_1_tmp
+                balance_routes_load[-1].append((theta_0_tmp, theta_1_tmp))
+        else:
+            balance_routes_feasibility.append(False)
+            balance_routes_load.append([])
+
+    skipped_points = set()
+    while np.max(distance_saved) > 0:
+        index = np.argmax(distance_saved)
+        loc = battery_change_route[index]
+        found = False
+        skip_possible = True
+        skip_points_location = (0, 0)
+        new_b_r_load = []
+        for i, b_r in enumerate(balance_routes):
+            for j, pos in enumerate(b_r):
+                if pos == loc:
+                    skip_points_location = (i, j)
+                    if balance_routes_feasibility[i] is True:
+                        theta_0_tmp, theta_1_tmp = balance_routes_load[i][j - 1]
+                        for k in range(j, len(b_r)):
+                            if k == j or b_r[k] in skipped_points:
+                                if theta_1_tmp >= b_i[b_r[k]] - q_i[b_r[k]]:
+                                    theta_sum_tmp = theta_0_tmp + theta_1_tmp + q_i[b_r[k]]
+                                    theta_1_tmp = theta_1_tmp - (b_i[b_r[k]] - q_i[b_r[k]])
+                                    theta_0_tmp = theta_sum_tmp - theta_1_tmp
+                                    new_b_r_load.append((theta_0_tmp, theta_1_tmp))
+                                else:
+                                    skip_possible = False
+                                    break
+                            else:
+                                theta_sum_tmp = theta_0_tmp + theta_1_tmp + q_i[b_r[k]]
+                                theta_1_tmp = theta_1_tmp + min(q_i[b_r[k]] + theta_0_tmp, a_i[b_r[k]])
+                                theta_0_tmp = theta_sum_tmp - theta_1_tmp
+                                new_b_r_load.append((theta_0_tmp, theta_1_tmp))
+                    else:
+                        skip_possible = False
+                    found = True
+                    break
+            if found:
+                break
+        if skip_possible is True:
+            skipped_points.add(loc)
+            balance_routes_load[skip_points_location[0]][skip_points_location[1]:] = new_b_r_load.copy()
+
+        distance_saved[index] = 0
+        low_index = index - 1
+        high_index = index + 1
+        while low_index > 0 and distance_saved[low_index] == 0:
+            low_index = low_index - 1
+        while high_index < len(battery_change_route) - 1 and distance_saved[high_index] == 0:
+            high_index = high_index + 1
+        if low_index > 0:
+            distance_saved[low_index] = distance_saved[low_index] + c_ij[
+                battery_change_route[low_index], battery_change_route[high_index]] - c_ij[
+                                            battery_change_route[low_index], battery_change_route[index]]
+        if high_index < len(battery_change_route) - 1:
+            distance_saved[high_index] = distance_saved[high_index] + c_ij[
+                battery_change_route[low_index], battery_change_route[high_index]] - c_ij[
+                                             battery_change_route[index], battery_change_route[high_index]]
+
+    return skipped_points
+
+
 def backtracking_best_combination(skip_plans_by_route, battery_change_route):
     def generate(combination, i, shortest_distance):
         if i == len(skip_plans_by_route):
@@ -90,7 +185,7 @@ def backtracking_best_combination(skip_plans_by_route, battery_change_route):
     return ans[0]
 
 
-def evaluate_saved_distance(skipped_points, battery_change_route, c_ij=np.random.randint(0, 5, size=(9, 9))):
+def evaluate_saved_distance(skipped_points, battery_change_route):
     dis = 0
     skipped_points_set = set(skipped_points)
     i = battery_change_route[0]
@@ -111,6 +206,6 @@ if __name__ == '__main__':
     _a_i = [0] + [5, 1, 5, 2] + [2, 3, 1, 0]
     _b_i = [0] + [9, 5, 2, 1] + [3, 3, 7, 0]
     _tsp_route = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0]
-    _skip_plans_by_route = [[(-1, 1, 2), (-1, 2, 3)], [(-1, 6, 5), (-1, 7, 9)]]
     print(get_most_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
+    print(get_greedy_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
     print('Main')

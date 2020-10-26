@@ -1,20 +1,24 @@
 from Stimulation import Station, EventList, BATTERY_LEVEL, DemandEvent, ChargeEvent
 from Routes import RouteBuilder
 import numpy as np
+from Read_Files import resolve_station_inventory
 
 # 在这里设置好_dis_mat, _t_mat, _capacity, _vehicle_num
 file_path = r'.\dm.npy'
 _dis_mat = np.load(file_path)
 _dis_mat = _dis_mat.astype(int)
+_dis_mat = _dis_mat[:41, :41]
 _t_mat = _dis_mat / 250 * 60
 _t_mat = np.around(_t_mat, 0).astype(int)
+_t_mat = _t_mat[:41, :41]
 _vehicle_num = 2
 _vehicle_capacity = 200
+station_num = 40
 
 
 class ChangingRules:
     def __init__(self):
-        self.stations = [Station([20] * 5) for _ in range(10)]
+        self.stations = [Station(next(resolve_station_inventory())) for _ in range(station_num)]
 
         self.eventList = EventList()
         demands = np.load('demands.npy')
@@ -77,7 +81,7 @@ class ChangingRules:
                     break
             bikes_dist = [station.bikesRecord[t_label][bl * 10] for bl in range(11)]
             loss = station.loss[t_label]
-            self.station_info.append([[t_label], [bikes_dist], [loss]])
+            self.station_info.append([[current_time], [bikes_dist], [loss]])
 
     def prepare_route_builder(self):
         self.routeBuilder = RouteBuilder(_dis_mat, _t_mat)
@@ -161,10 +165,22 @@ class ChangingRules:
         _, bikes_num_info, _ = info
         return sum(bikes_num_info[0][0:3])
 
+    def calculate_loss(self):
+        station_loss = []
+        for station in self.stations:
+            loss = 0
+            for time_label in station.loss.keys():
+                loss = loss + station.loss[time_label]
+            station_loss.append(loss)
+        print(station_loss)
+
 
 if __name__ == '__main__':
     changingRules = ChangingRules()
     changingRules.prepare_route_builder()
+    changingRules.stimulate(3600)
+    changingRules.calculate_loss()
+    '''
     _current_time = 0
     _anticipation_horizon = 600
     _num_time_slices = 6
@@ -183,3 +199,6 @@ if __name__ == '__main__':
         # 发送这个时刻得到的，截止到下一个anticipation horizon之前的计划
         # 同时让routeBuilder的状态更新到下一个anticipation horizon开始前的状态
         changingRules.get_routed_result(_current_time + _anticipation_horizon)
+    '''
+    print('-----------------')
+    print('finished')

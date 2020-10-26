@@ -26,3 +26,6 @@ for maxIter do
     end if
 end for
 """
+
+from Read_Files import resolve_station_inventory
+print(next(resolve_station_inventory()))

@@ -1,6 +1,6 @@
 import numpy as np
 
-station_num = 10
+station_num = 40
 
 distance_matrix = np.load('dm.npy')
 distance_matrix = distance_matrix[1:station_num + 1, 1:station_num + 1]
@@ -22,7 +22,7 @@ limit_t = T - np.max(time_matrix)
 
 demands = []
 # 通过这里设置时间内需求上限
-max_num_d = 3
+max_num_d = 20
 for i in range(len(distance_matrix)):
     lamda = T / max_num_d
     interval = np.around(np.random.exponential(lamda, max_num_d), 0).astype(int)
@@ -38,4 +38,4 @@ for i in range(len(distance_matrix)):
                 [i + 1, k + 1, t, t + time_matrix[i, k], battery_consumption[i, k], int(np.random.randint(1, 4, 1))])
 
 demands = np.array(demands)
-np.save('demands_1', demands)
+np.save('demands', demands)

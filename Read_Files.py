@@ -2,6 +2,7 @@ import re
 import numpy as np
 from scipy.spatial.distance import cdist
 from Routes import RouteBuilder
+from collections import Counter
 
 
 def read_single_soloman(filename):
@@ -38,6 +39,18 @@ def resolve_soloman(info, mat):
     return vehicle_num, capacity, dis_mat, demand, t_win, t_ser
 
 
+def resolve_station_inventory(station_inventory_path='.\station_inventory.npy'):
+    station_inventory = np.load(station_inventory_path)
+
+    for bike_num in station_inventory:
+        bike_counter = Counter()
+        bl = 0
+        for i in bike_num:
+            bike_counter[bl] = i
+            bl += 10
+        yield bike_counter
+
+
 if __name__ == '__main__':
     file_path = r'.\solomon_25\C102.txt'
     _info, _mat = read_single_soloman(file_path)
@@ -47,7 +60,7 @@ if __name__ == '__main__':
     routeBuilder = RouteBuilder(_dis_mat, _dis_mat)
     routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                  [_t_win[0, 1]] * _vehicle_num, [200] * _vehicle_num)
-    routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:], [1]*25)
+    routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:], [1] * 25)
     routeBuilder.build_initial_solution()
     print(routeBuilder.get_feasibility(routeBuilder.routes, range(3)))
     routeBuilder.print_sol()
