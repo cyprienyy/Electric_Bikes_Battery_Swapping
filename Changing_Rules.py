@@ -1,5 +1,5 @@
 from Stimulation import Station, EventList, BATTERY_LEVEL, DemandEvent, ChargeEvent
-from Routes import RouteBuilder
+from Routes import RouteBuilder, RouteBuilderByDistance
 import numpy as np
 from Read_Files import resolve_station_inventory
 
@@ -14,11 +14,13 @@ _t_mat = _t_mat[:41, :41]
 _vehicle_num = 2
 _vehicle_capacity = 200
 station_num = 40
+w_i = np.array([8, 6, 6, 4, 4, 2, 2, 0, 0, 0, 0])
 
 
 class ChangingRules:
     def __init__(self):
-        self.stations = [Station(next(resolve_station_inventory())) for _ in range(station_num)]
+        resolve_station_inventory_iter = resolve_station_inventory()
+        self.stations = [Station(next(resolve_station_inventory_iter)) for _ in range(station_num)]
 
         self.eventList = EventList()
         demands = np.load('demands.npy')
@@ -84,7 +86,7 @@ class ChangingRules:
             self.station_info.append([[current_time], [bikes_dist], [loss]])
 
     def prepare_route_builder(self):
-        self.routeBuilder = RouteBuilder(_dis_mat, _t_mat)
+        self.routeBuilder = RouteBuilderByDistance(_dis_mat, _t_mat)
         self.routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                           [3600] * _vehicle_num,
                                           [200] * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
@@ -97,6 +99,8 @@ class ChangingRules:
             _task = self.rule_2(info)
             if _task:
                 _tasks.append((i + 1,) + _task)
+        _tasks = sorted(_tasks, key = lambda x: x[5], reverse= True)
+        _tasks = _tasks[0:30]
         _tasks = list(zip(*_tasks))
         # location, start_time, end_time, task_demand, service_time, w_i
         if _tasks:
@@ -153,9 +157,10 @@ class ChangingRules:
     @classmethod
     def rule_2(cls, info):
         # rule2用于产生换电任务
-        time_label, bikes_num_info, loos_info = info
-        if sum(bikes_num_info[0][0:3]) >= 3:
-            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:3]), 180, 1
+        time_label, bikes_num_info, _ = info
+        if sum(bikes_num_info[0][0:7]) >= 0:
+            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 120, np.dot(
+                np.array(bikes_num_info[0]), w_i)
         else:
             return None
 
@@ -172,14 +177,20 @@ class ChangingRules:
             for time_label in station.loss.keys():
                 loss = loss + station.loss[time_label]
             station_loss.append(loss)
-        print(station_loss)
+        return station_loss
 
 
 if __name__ == '__main__':
     changingRules = ChangingRules()
     changingRules.prepare_route_builder()
+    changingRules.get_station_info_by_moment(0)
+    changingRules.update_existed_tasks()
+    changingRules.produce_tasks()
+    changingRules.routeBuilder.build_initial_solution()
+    print(changingRules.routeBuilder.get_feasibility(changingRules.routeBuilder.best_feas_sol, [0, 1]))
+    changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
-    changingRules.calculate_loss()
+    print(changingRules.calculate_loss())
     '''
     _current_time = 0
     _anticipation_horizon = 600

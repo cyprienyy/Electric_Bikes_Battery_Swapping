@@ -75,8 +75,6 @@ def get_most_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i,
 
 
 def get_greedy_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i, capacity):
-    # To do:
-    # 更新返回新的要去除的点的方式
     distance_saved = np.zeros(len(battery_change_route), np.int32)
     for i, loc in enumerate(battery_change_route):
         if loc != 0:

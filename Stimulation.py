@@ -134,7 +134,7 @@ class Station:
         bikes_counter = Counter(out_bikes[0:num_change])
         self.numBikes.subtract(bikes_counter)
         self.onsiteVehicles.subtract(battery_counter)
-        self.numBikes[-1] += num_change
+        self.numBikes[BATTERY_LEVEL[-1]] += num_change
 
     def record(self, current_time):
         self.bikesRecord[current_time] = Counter(self.numBikes)

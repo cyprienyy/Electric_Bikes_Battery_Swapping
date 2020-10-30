@@ -159,6 +159,8 @@ class RouteBuilder:
             for j in range(0, len(r) - 1):
                 total_time = total_time + self.t_ij[
                     self.trans_key_to_station(r[j]), self.trans_key_to_station(r[j + 1])]
+                if r[j+1] > self.c_ij.shape[0]:
+                    total_time = total_time + self.key2Task[r[j+1]].serviceTime
             if total_time > period:
                 t_feas.append(False)
             else:
@@ -648,12 +650,14 @@ class RouteBuilder:
                     load = load + self.key2Task[j].demand
             self.routes_info[i]['current_load'] = load
             for k, j in enumerate(r[1:cur + 1]):
-                _res.append(
-                    (self.trans_key_to_station(j), s_jr[k + 1], s_jr[k + 1] + w_jr[k + 2] + self.get_service_time(j),
-                     self.key2Task[j].demand))
+                if j > self.c_ij.shape[0]:
+                    _res.append(
+                        (
+                        self.trans_key_to_station(j), s_jr[k + 1], s_jr[k + 1] + w_jr[k + 2] + self.get_service_time(j),
+                        self.key2Task[j].demand))
+                    self.fixedKeys.add(j)
+                    self.activeKeys.remove(j)
                 self.fixedRoutes[i].append(j)
-                self.fixedKeys.add(j)
-                self.activeKeys.remove(j)
             '''
             for _, j in enumerate(r[cur + 1:-1]):
                 del self.key2Task[j]
@@ -661,6 +665,14 @@ class RouteBuilder:
             temp_r = [r[cur], r[-1]]
             self.best_feas_sol[i] = temp_r
         return _res
+
+
+class RouteBuilderByDistance(RouteBuilder):
+    def __init__(self, distance_matrix, time_matrix):
+        RouteBuilder.__init__(self, distance_matrix, time_matrix)
+
+    def evaluate_solution(self, routes, tour_id):
+        return self.evaluate_solution_by_total_distance(routes)
 
 
 if __name__ == '__main__':

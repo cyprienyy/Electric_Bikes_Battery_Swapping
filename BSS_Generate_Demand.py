@@ -13,7 +13,7 @@ relation_coeff = np.random.randint(1, 4, (station_num, station_num))
 i = list(range(station_num))
 relation_coeff[i, i] = 0
 
-# 电量最低消耗设置为10%
+# 电量最低消耗设置为20%
 battery_consumption = 10 + np.around((time_matrix - np.min(time_matrix[time_matrix > 0])) / (
             np.max(time_matrix) - np.min(time_matrix[time_matrix > 0])) * 20, 0).astype(int)
 # 产生需求的时间上限
