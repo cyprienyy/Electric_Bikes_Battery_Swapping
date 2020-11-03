@@ -1,4 +1,5 @@
 import numpy as np
+from RGCP import RGCP
 
 c_ij = np.random.randint(0, 5, size=(9, 9))
 
@@ -204,6 +205,8 @@ if __name__ == '__main__':
     _a_i = [0] + [5, 1, 5, 2] + [2, 3, 1, 0]
     _b_i = [0] + [9, 5, 2, 1] + [3, 3, 7, 0]
     _tsp_route = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0]
-    print(get_most_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
-    print(get_greedy_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
+    # print(get_most_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
+    # print(get_greedy_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
+    routes = RGCP(_q_i, c_ij, 5)
+    print(routes)
     print('Main')

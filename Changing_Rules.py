@@ -99,7 +99,7 @@ class ChangingRules:
             _task = self.rule_2(info)
             if _task:
                 _tasks.append((i + 1,) + _task)
-        _tasks = sorted(_tasks, key = lambda x: x[5], reverse= True)
+        _tasks = sorted(_tasks, key=lambda x: x[5], reverse=True)
         _tasks = _tasks[0:30]
         _tasks = list(zip(*_tasks))
         # location, start_time, end_time, task_demand, service_time, w_i
@@ -159,10 +159,18 @@ class ChangingRules:
         # rule2用于产生换电任务
         time_label, bikes_num_info, _ = info
         if sum(bikes_num_info[0][0:7]) >= 0:
-            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 120, np.dot(
-                np.array(bikes_num_info[0]), w_i)
+            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 120, cls.get_station_weight_1(
+                bikes_num_info[0])
         else:
             return None
+
+    @classmethod
+    def get_station_weight_1(cls, bikes_num_info):
+        return np.dot(np.array(bikes_num_info), w_i)
+
+    @classmethod
+    def get_station_weight_2(cls, bikes_num_info, demand, inflow):
+        return min(max((demand - inflow) - sum(bikes_num_info[4:]), 0), sum(bikes_num_info[0:3]))
 
     @classmethod
     def rule_3(cls, info):
