@@ -19,7 +19,7 @@ def get_feasibility_of_balance_route(q_i, route, capacity, tw_required):
         lambda_p += q_i[i]
         lambda_min = min(lambda_p, lambda_min)
         lambda_max = max(lambda_p, lambda_max)
-        if (q_i[i] + capacity - lambda_max) < (q_i[i] - lambda_min):
+        if (lambda_p + capacity - lambda_max) < (lambda_p - lambda_min):
             if tw_required:
                 return False, (None, None)
             else:
@@ -208,5 +208,6 @@ if __name__ == '__main__':
     # print(get_most_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
     # print(get_greedy_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
     routes = RGCP(_q_i, c_ij, 5)
+    print(get_feasibility_of_balance_route([_q_i[loc] for loc in routes[0]], routes[0], 5, False))
     print(routes)
     print('Main')
