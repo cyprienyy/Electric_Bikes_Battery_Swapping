@@ -18,7 +18,7 @@ def RGCP(q_i, c_ij, capacity, a=1):
     while vertexes:
         RCL = []
         for i, vertex in enumerate(vertexes):
-            if load + capacity - load_max < min(q_i[vertex], 0) or load - load_min > capacity - max(q_i[vertex], 0):
+            if load + capacity - load_max < -min(q_i[vertex], 0) or load - load_min > capacity - max(q_i[vertex], 0):
                 continue
             else:
                 RCL.append((vertex, c_ij[route[-1], vertex], i))
