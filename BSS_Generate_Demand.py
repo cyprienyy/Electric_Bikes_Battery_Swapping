@@ -38,4 +38,4 @@ for i in range(len(distance_matrix)):
                 [i + 1, k + 1, t, t + time_matrix[i, k], battery_consumption[i, k], int(np.random.randint(1, 4, 1))])
 
 demands = np.array(demands)
-np.save('demands', demands)
+# np.save('demands', demands)

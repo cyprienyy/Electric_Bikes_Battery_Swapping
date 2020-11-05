@@ -1,5 +1,6 @@
 import numpy as np
 from RGCP import RGCP
+from Read_Files import resolve_instancesBRP
 
 c_ij = np.random.randint(0, 5, size=(9, 9))
 
@@ -197,17 +198,7 @@ def evaluate_saved_distance(skipped_points, battery_change_route):
 
 if __name__ == '__main__':
     print('Calculate_saved_distance Main')
-    _q_i = [0, -4, 5, 2, 1, 2, 4, -3, -5]
-    # _q_i_0 = [0, -4, 5, 2, 1, 0]
-    # _q_i_1 = [0, 2, 4, -3, -5, 0]
-    _capacity = 10
-    _balance_route = [[0, 1, 2, 3, 4, 0], [0, 5, 6, 7, 8, 0]]
-    _a_i = [0] + [5, 1, 5, 2] + [2, 3, 1, 0]
-    _b_i = [0] + [9, 5, 2, 1] + [3, 3, 7, 0]
-    _tsp_route = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0]
-    # print(get_most_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
-    # print(get_greedy_saved_distance(_balance_route, _tsp_route, _q_i, _a_i, _b_i, _capacity))
-    routes = RGCP(_q_i, c_ij, 5)
-    print(get_feasibility_of_balance_route([_q_i[loc] for loc in routes[0]], routes[0], 5, False))
+    _, _q_i, _capacity, _c_ij = resolve_instancesBRP()
+    routes = RGCP(_q_i, _c_ij, _capacity)
     print(routes)
     print('Main')

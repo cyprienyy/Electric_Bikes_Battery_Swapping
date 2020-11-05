@@ -1,3 +1,3 @@
-a = [4, 2, 3]
-a.sort()
-print('Main')
+from Read_Files import resolve_instancesBRP
+
+print(resolve_instancesBRP())

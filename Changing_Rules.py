@@ -176,7 +176,7 @@ class ChangingRules:
     def rule_3(cls, info):
         # rule3用于更新换电的demand
         _, bikes_num_info, _ = info
-        return sum(bikes_num_info[0][0:3])
+        return sum(bikes_num_info[0][0:7])
 
     def calculate_loss(self):
         station_loss = []
@@ -194,7 +194,8 @@ if __name__ == '__main__':
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
     changingRules.produce_tasks()
-    changingRules.routeBuilder.parallel_insertion()
+    changingRules.routeBuilder.build_initial_solution()
+    changingRules.routeBuilder.multiple_neighborhood_search()
     print(changingRules.routeBuilder.get_feasibility(changingRules.routeBuilder.best_feas_sol, [0, 1]))
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)

@@ -51,6 +51,31 @@ def resolve_station_inventory(station_inventory_path='.\station_inventory.npy'):
         yield bike_counter
 
 
+def resolve_instancesBRP(filepath='1Bari30.txt'):
+    with open(filepath, 'r') as file_to_read:
+        pos = []
+        while True:
+            lines = file_to_read.readline()  # 整行读取数据
+            if not lines:
+                break
+                pass
+            if re.match(r'\s*[0-9]', lines) is not None:
+                lines = lines.strip()
+                lines = lines.split()
+                lines = list(map(resolve_str_2_int, lines))
+                pos.append(lines)  # 添加新读取的数据
+            pass
+    pass
+    return pos[0][0], np.array(pos[1]), pos[2][0], np.array(pos[3:])
+
+
+def resolve_str_2_int(x):
+    if x == '1e+009' or x == '1E+009':
+        return 1000000
+    else:
+        return int(x)
+
+
 if __name__ == '__main__':
     file_path = r'.\solomon_25\C102.txt'
     _info, _mat = read_single_soloman(file_path)
