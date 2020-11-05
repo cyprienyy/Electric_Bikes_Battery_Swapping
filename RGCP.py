@@ -36,6 +36,8 @@ def RGCP(q_i, c_ij, capacity, a=1):
             route = routes[-1]
             m = m + 1
             load = 0
+            load_min = 0
+            load_max = 0
             vertex = vertexes.pop(random.randint(0, len(vertexes) - 1))
             route.append(vertex)
             load = load + q_i[vertex]

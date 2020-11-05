@@ -1,3 +1,3 @@
-import random
-
-print(random.randint(1,3))
+a = [4, 2, 3]
+a.sort()
+print('Main')

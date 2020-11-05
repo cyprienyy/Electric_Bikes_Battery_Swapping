@@ -159,8 +159,8 @@ class RouteBuilder:
             for j in range(0, len(r) - 1):
                 total_time = total_time + self.t_ij[
                     self.trans_key_to_station(r[j]), self.trans_key_to_station(r[j + 1])]
-                if r[j+1] > self.c_ij.shape[0]:
-                    total_time = total_time + self.key2Task[r[j+1]].serviceTime
+                if r[j + 1] > self.c_ij.shape[0]:
+                    total_time = total_time + self.key2Task[r[j + 1]].serviceTime
             if total_time > period:
                 t_feas.append(False)
             else:
@@ -238,6 +238,73 @@ class RouteBuilder:
                 best_sol = float('inf')
                 move = None
                 for i in unassigned_nodes:
+                    for j in range(1, len(sol[num_tour])):
+                        sigma_1 = sol[num_tour][:j]
+                        sigma_2 = sol[num_tour][j:]
+                        obj = self.evaluate_solution([sigma_1 + [i] + sigma_2], [num_tour])
+                        f = all(self.get_feasibility([sigma_1 + [i] + sigma_2], [num_tour]))
+                        if obj < best_sol and f:
+                            move = (i, j)
+                            best_sol = obj
+                if move:
+                    i = move[0]
+                    j = move[1]
+                    sigma_1 = sol[num_tour][:j]
+                    sigma_2 = sol[num_tour][j:]
+                    sol[num_tour] = sigma_1 + [i] + sigma_2
+                    unassigned_nodes.remove(move[0])
+                    add_move = None
+                else:
+                    if add_move:
+                        j = add_move[1]
+                        sigma_1 = sol[num_tour][:j]
+                        sigma_2 = sol[num_tour][j + 1:]
+                        sol[num_tour] = sigma_1 + sigma_2
+                        add_move = None
+                        insertion_allowed = False
+                    else:
+                        best_add_sol = float('inf')
+                        for j in range(1, len(sol[num_tour])):
+                            if sol[num_tour][j - 1] != satellite and sol[num_tour][j] != satellite:
+                                sigma_1 = sol[num_tour][:j]
+                                sigma_2 = sol[num_tour][j:]
+                                add_obj = self.evaluate_solution([sigma_1 + [satellite] + sigma_2], [num_tour])
+                                # To do:
+                                # 这里需要合理选择
+                                add_f = all(
+                                    self.get_period_upper_bound_feasibility([sigma_1 + [satellite] + sigma_2],
+                                                                            [num_tour]))
+                                if add_obj < best_add_sol and add_f:
+                                    add_move = (satellite, j)
+                                    best_add_sol = add_obj
+                        if add_move:
+                            i = add_move[0]
+                            j = add_move[1]
+                            sigma_1 = sol[num_tour][:j]
+                            sigma_2 = sol[num_tour][j:]
+                            sol[num_tour] = sigma_1 + [i] + sigma_2
+                        else:
+                            insertion_allowed = False
+            num_tour = num_tour + 1
+        self.routes = self.copy_routes(sol)
+        self.banList.append(self.evaluate_solution(self.routes, list(range(len(self.routes)))))
+        self.best_feas_sol = self.copy_routes(self.routes)
+        self.best_feas_obj = self.evaluate_solution(self.best_feas_sol, list(range(len(self.routes))))
+        self.last_sol_obj = self.best_feas_obj
+
+    def parallel_insertion(self):
+        self.banList = []
+        unassigned_nodes = list(self.activeKeys)
+        unassigned_nodes.sort(key=lambda x: self.key2Task[x].w_i, reverse=True)
+        add_move = None
+        num_tour = 0
+        sol = self.copy_routes(self.routes)
+        while num_tour < len(sol) and unassigned_nodes:
+            insertion_allowed = True
+            while insertion_allowed and unassigned_nodes:
+                best_sol = float('inf')
+                move = None
+                for i in unassigned_nodes[:1]:
                     for j in range(1, len(sol[num_tour])):
                         sigma_1 = sol[num_tour][:j]
                         sigma_2 = sol[num_tour][j:]
@@ -653,8 +720,9 @@ class RouteBuilder:
                 if j > self.c_ij.shape[0]:
                     _res.append(
                         (
-                        self.trans_key_to_station(j), s_jr[k + 1], s_jr[k + 1] + w_jr[k + 2] + self.get_service_time(j),
-                        self.key2Task[j].demand))
+                            self.trans_key_to_station(j), s_jr[k + 1],
+                            s_jr[k + 1] + w_jr[k + 2] + self.get_service_time(j),
+                            self.key2Task[j].demand))
                     self.fixedKeys.add(j)
                     self.activeKeys.remove(j)
                 self.fixedRoutes[i].append(j)

@@ -194,7 +194,7 @@ if __name__ == '__main__':
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
     changingRules.produce_tasks()
-    changingRules.routeBuilder.build_initial_solution()
+    changingRules.routeBuilder.parallel_insertion()
     print(changingRules.routeBuilder.get_feasibility(changingRules.routeBuilder.best_feas_sol, [0, 1]))
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
