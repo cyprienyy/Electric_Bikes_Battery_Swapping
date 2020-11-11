@@ -109,7 +109,7 @@ class ChangingRules:
         return res
 
     def prepare_route_builder(self):
-        self.routeBuilder = RouteBuilder(_dis_mat, _t_mat)
+        self.routeBuilder = RouteBuilderByDistance(_dis_mat, _t_mat)
         self.routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                           [3600] * _vehicle_num,
                                           [200] * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
@@ -184,7 +184,7 @@ class ChangingRules:
         # rule2用于产生换电任务
         time_label, bikes_num_info, _ = info
         if sum(bikes_num_info[0][0:7]) >= 0:
-            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 90, cls.get_station_weight_1(
+            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 120, cls.get_station_weight_1(
                 bikes_num_info[0])
         else:
             return None
@@ -220,12 +220,13 @@ if __name__ == '__main__':
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
     changingRules.produce_tasks()
-    # changingRules.routeBuilder.build_initial_solution()
-    changingRules.routeBuilder.pass_initial_solution(
-        [[0, 50, 48, 71, 46, 54, 44, 43, 67, 45, -1, 59, 57, 62, 64, 68, 49, 60, 63, 55, 69, 0],
-         [0, 58, 70, 52, 51, 56, 61, 65, 66, 53, 42, -1, 47, 0]])
+    changingRules.routeBuilder.build_initial_solution()
+    # changingRules.routeBuilder.pass_initial_solution(
+        # [[0, 50, 48, 71, 46, 54, 44, 43, 67, 45, -1, 59, 57, 62, 64, 68, 49, 60, 63, 55, 69, 0],
+         # [0, 58, 70, 52, 51, 56, 61, 65, 66, 53, 42, -1, 47, 0]])
     changingRules.routeBuilder.multiple_neighborhood_search()
-    print(changingRules.routeBuilder.get_feasibility(changingRules.routeBuilder.best_feas_sol, [0, 1]))
+    changingRules.routeBuilder.add_unassigned_tasks()
+    print(changingRules.routeBuilder.get_feasibility([[0, 70, 52, 56, 61, 65, 51, 66, 67, 69, 42, -1, 47, 0]], [1]))
     print(changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
