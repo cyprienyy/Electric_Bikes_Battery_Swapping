@@ -292,6 +292,13 @@ class RouteBuilder:
         self.best_feas_obj = self.evaluate_solution(self.best_feas_sol, list(range(len(self.routes))))
         self.last_sol_obj = self.best_feas_obj
 
+    def pass_initial_solution(self, routes):
+        self.routes = self.copy_routes(routes)
+        self.banList.append(self.evaluate_solution(self.routes, list(range(len(self.routes)))))
+        self.best_feas_sol = self.copy_routes(self.routes)
+        self.best_feas_obj = self.evaluate_solution(self.best_feas_sol, list(range(len(self.routes))))
+        self.last_sol_obj = self.best_feas_obj
+
     def parallel_insertion(self):
         self.banList = []
         unassigned_nodes = list(self.activeKeys)
@@ -732,6 +739,7 @@ class RouteBuilder:
             '''
             temp_r = [r[cur], r[-1]]
             self.best_feas_sol[i] = temp_r
+        self.routes = self.copy_routes(self.best_feas_sol)
         return _res
 
 

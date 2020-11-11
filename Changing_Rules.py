@@ -35,8 +35,10 @@ class ChangingRules:
         self.banned_stations = []
 
     def stimulate(self, lp):
+        '''
         for station in self.stations:
             station.clear_state()
+        '''
         while self.eventList.next_event() is not None:
             next_event = self.eventList.next_event()
             if next_event.startTime > lp:
@@ -85,6 +87,27 @@ class ChangingRules:
             loss = station.loss[t_label]
             self.station_info.append([[current_time], [bikes_dist], [loss]])
 
+    def calculate_scheduled_demand(self):
+        res = 0
+        for sch in self.charge_schedule:
+            res = res + sch[-1]
+        return res
+
+    def calculate_excess_demand(self):
+        excess_demand = 0
+        for station in self.stations:
+            excess_demand = excess_demand + sum(station.onsiteVehicles.values())
+        return excess_demand
+
+    def show_bike_distribution(self):
+        res = {}
+        for bl in BATTERY_LEVEL:
+            res[bl] = 0
+        for info in self.station_info:
+            for bl in BATTERY_LEVEL:
+                res[bl] = res[bl] + info[1][0][bl // 10]
+        return res
+
     def prepare_route_builder(self):
         self.routeBuilder = RouteBuilderByDistance(_dis_mat, _t_mat)
         self.routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
@@ -125,7 +148,9 @@ class ChangingRules:
         for key in self.routeBuilder.activeKeys:
             info = self.station_info[self.routeBuilder.trans_key_to_station(key) - 1]
             new_task_demand = self.rule_3(info)
-            self.routeBuilder.key2Task[key].task_demand = new_task_demand
+            new_w_i = self.get_station_weight_1(info[1][0])
+            self.routeBuilder.key2Task[key].demand = new_task_demand
+            self.routeBuilder.key2Task[key].w_i = new_w_i
         return
 
     '''
@@ -159,7 +184,7 @@ class ChangingRules:
         # rule2用于产生换电任务
         time_label, bikes_num_info, _ = info
         if sum(bikes_num_info[0][0:7]) >= 0:
-            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 120, cls.get_station_weight_1(
+            return time_label[0], time_label[0] + 3600, sum(bikes_num_info[0][0:7]), 90, cls.get_station_weight_1(
                 bikes_num_info[0])
         else:
             return None
@@ -191,34 +216,56 @@ class ChangingRules:
 if __name__ == '__main__':
     changingRules = ChangingRules()
     changingRules.prepare_route_builder()
+    # '''
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
     changingRules.produce_tasks()
+    dynamic_route = [[0, 57, 55, 63, 60, 49, 68, 64, 62, 47, 69, 42, 48, -1, 0],
+                     [0, -1, 70, 52, 56, 61, 65, 51, 66, 54, 58, -1, 71, 46, 44, 43, 67, 45, 53, 59, 50, 0]]
+    print(changingRules.routeBuilder.get_feasibility(dynamic_route, [0, 1]))
+    print(changingRules.routeBuilder.evaluate_solution_by_total_distance(dynamic_route))
     changingRules.routeBuilder.build_initial_solution()
     changingRules.routeBuilder.multiple_neighborhood_search()
+    dynamic_route = [[0, 57, 55, 63, 60, 49, 68, 64, 62, 47, 69, 42, 48, -1],
+                     [0, -1, 70, 52, 56, 61, 65, 51, 66, 54, 58, -1, 71, 46, 44, 43, 67, 45, 53, 59, 50]]
+    print(changingRules.routeBuilder.get_feasibility(dynamic_route, [0, 1]))
+    print(changingRules.routeBuilder.evaluate_solution_by_total_distance(dynamic_route))
     print(changingRules.routeBuilder.get_feasibility(changingRules.routeBuilder.best_feas_sol, [0, 1]))
+    print(changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
+    changingRules.get_station_info_by_moment(3600)
     print(changingRules.calculate_loss())
+    print(changingRules.calculate_excess_demand())
+    print(changingRules.calculate_scheduled_demand())
+    print(changingRules.show_bike_distribution())
     '''
     _current_time = 0
     _anticipation_horizon = 600
     _num_time_slices = 6
     for _ts in range(_num_time_slices):
-        _current_time = _current_time + _ts * _anticipation_horizon
+        _current_time = _ts * _anticipation_horizon
         # 获取当前时刻的状态
         changingRules.stimulate(_current_time)
 
         changingRules.get_station_info_by_moment(_current_time)
         changingRules.update_existed_tasks()
-        changingRules.produce_tasks()
+        if _current_time == 0:
+            changingRules.produce_tasks()
 
         changingRules.routeBuilder.build_initial_solution()
         changingRules.routeBuilder.multiple_neighborhood_search()
-
         # 发送这个时刻得到的，截止到下一个anticipation horizon之前的计划
         # 同时让routeBuilder的状态更新到下一个anticipation horizon开始前的状态
         changingRules.get_routed_result(_current_time + _anticipation_horizon)
+    changingRules.stimulate(_num_time_slices * _anticipation_horizon)
+    changingRules.get_station_info_by_moment(_num_time_slices * _anticipation_horizon)
+    print(changingRules.calculate_loss())
+    print(changingRules.routeBuilder.evaluate_solution_by_total_distance(
+        [changingRules.routeBuilder.fixedRoutes[0] + [0], changingRules.routeBuilder.fixedRoutes[1] + [0]]))
+    print(changingRules.calculate_excess_demand())
+    print(changingRules.show_bike_distribution())
+    print(changingRules.calculate_scheduled_demand())
     '''
     print('-----------------')
     print('finished')

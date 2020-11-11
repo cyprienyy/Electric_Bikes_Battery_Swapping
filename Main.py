@@ -1,3 +1,5 @@
 from Read_Files import resolve_instancesBRP
+from collections import Counter
 
-print(resolve_instancesBRP())
+a=Counter([2,2,1,3,3,3])
+print(sum(a.values()))
