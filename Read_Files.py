@@ -66,7 +66,7 @@ def resolve_instancesBRP(filepath='1Bari30.txt'):
                 pos.append(lines)  # 添加新读取的数据
             pass
     pass
-    return pos[0][0], np.array(pos[1]), pos[2][0], np.array(pos[3:])
+    return pos[0][0], np.array(pos[1]), np.array(pos[2]), np.array(pos[3]), pos[4][0], np.array(pos[5:])
 
 
 def resolve_str_2_int(x):

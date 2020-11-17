@@ -1,8 +1,8 @@
 import numpy as np
-from RGCP import RGCP
+from RGCP import RGCP, get_tsp_route
 from Read_Files import resolve_instancesBRP
 
-c_ij = np.random.randint(0, 5, size=(9, 9))
+_, _q_i, _a_i, _b_i, _capacity, _c_ij = resolve_instancesBRP()
 
 
 def get_feasibility_of_balance_route(q_i, route, capacity, tw_required):
@@ -72,11 +72,11 @@ def get_most_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i,
             temp_a_i.append(a_i[loc])
             temp_b_i.append(b_i[loc])
         skip_plans_by_route.append(get_skip_for_feasible_route(temp_a_i, temp_b_i, temp_q_i, b_r, capacity))
-    print(skip_plans_by_route)
+    # print(skip_plans_by_route)
     return backtracking_best_combination(skip_plans_by_route, battery_change_route)
 
 
-def get_greedy_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i, capacity):
+def get_greedy_saved_distance(balance_routes, battery_change_route, q_i, a_i, b_i, capacity, c_ij=_c_ij):
     distance_saved = np.zeros(len(battery_change_route), np.int32)
     for i, loc in enumerate(battery_change_route):
         if loc != 0:
@@ -171,7 +171,7 @@ def backtracking_best_combination(skip_plans_by_route, battery_change_route):
     def generate(combination, i, shortest_distance):
         if i == len(skip_plans_by_route):
             new_s_dis = evaluate_saved_distance(combination, battery_change_route)
-            print(combination)
+            # print(combination)
             if new_s_dis < shortest_distance[0]:
                 shortest_distance[0] = new_s_dis
         else:
@@ -185,7 +185,7 @@ def backtracking_best_combination(skip_plans_by_route, battery_change_route):
     return ans[0]
 
 
-def evaluate_saved_distance(skipped_points, battery_change_route):
+def evaluate_saved_distance(skipped_points, battery_change_route, c_ij=_c_ij):
     dis = 0
     skipped_points_set = set(skipped_points)
     i = battery_change_route[0]
@@ -198,7 +198,10 @@ def evaluate_saved_distance(skipped_points, battery_change_route):
 
 if __name__ == '__main__':
     print('Calculate_saved_distance Main')
-    _, _q_i, _capacity, _c_ij = resolve_instancesBRP()
     routes = RGCP(_q_i, _c_ij, _capacity)
+    tsp_route = get_tsp_route(_c_ij)
+    print(get_most_saved_distance(routes, tsp_route, _q_i, _a_i, _b_i, _capacity))
+    print(get_greedy_saved_distance(routes, tsp_route, _q_i, _a_i, _b_i, _capacity))
+    print(get_tsp_route(_c_ij))
     print(routes)
     print('Main')
