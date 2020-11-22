@@ -2,7 +2,7 @@ import numpy as np
 
 # 定义宏观变量。
 satellite = -1
-upper_limit = 7200
+upper_limit = 3600
 lower_limit = 0
 
 # 与Multiple Neighborhood Search相关宏观变量。
@@ -227,6 +227,9 @@ class RouteBuilder:
             l_feas.append(l_f)
         return l_feas
 
+    def get_feasibility_for_solution_construction(self, routes, tour_id):
+        return self.get_period_upper_bound_feasibility(routes, tour_id)
+
     def build_initial_solution(self):
         self.banList = []
         unassigned_nodes = self.activeKeys.copy()
@@ -273,8 +276,8 @@ class RouteBuilder:
                                 # To do:
                                 # 这里需要合理选择
                                 add_f = all(
-                                    self.get_period_upper_bound_feasibility([sigma_1 + [satellite] + sigma_2],
-                                                                            [num_tour]))
+                                    self.get_feasibility_for_solution_construction([sigma_1 + [satellite] + sigma_2],
+                                                                                   [num_tour]))
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
@@ -348,8 +351,8 @@ class RouteBuilder:
                                 # To do:
                                 # 这里需要合理选择
                                 add_f = all(
-                                    self.get_period_upper_bound_feasibility([sigma_1 + [satellite] + sigma_2],
-                                                                            [num_tour]))
+                                    self.get_feasibility_for_solution_construction([sigma_1 + [satellite] + sigma_2],
+                                                                                   [num_tour]))
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
@@ -414,8 +417,8 @@ class RouteBuilder:
                                 # To do:
                                 # 这里需要合理选择
                                 add_f = all(
-                                    self.get_period_upper_bound_feasibility([sigma_1 + [satellite] + sigma_2],
-                                                                            [num_tour]))
+                                    self.get_feasibility_for_solution_construction([sigma_1 + [satellite] + sigma_2],
+                                                                                   [num_tour]))
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
@@ -825,6 +828,19 @@ class RouteBuilderByDistance(RouteBuilder):
 
     def evaluate_solution(self, routes, tour_id):
         return self.evaluate_solution_by_total_distance(routes)
+
+
+class RouteBuilderForSoloman(RouteBuilder):
+    def __init__(self, distance_matrix, time_matrix):
+        RouteBuilder.__init__(self, distance_matrix, time_matrix)
+
+    def evaluate_solution(self, routes, tour_id):
+        return self.evaluate_solution_by_total_distance(routes)
+
+    def get_feasibility(self, routes, tour_id):
+        return [all(f_col) for f_col in
+                zip(self.get_load_feasibility(routes, tour_id),
+                    self.get_time_window_feasibility(routes, tour_id))]
 
 
 if __name__ == '__main__':
