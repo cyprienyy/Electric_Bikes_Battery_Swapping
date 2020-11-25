@@ -213,29 +213,27 @@ class ChangingRules:
         return station_loss
 
 
-if __name__ == '__main__':
+def static_method():
     changingRules = ChangingRules()
     changingRules.prepare_route_builder()
-    # '''
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
     changingRules.produce_tasks()
     changingRules.routeBuilder.build_initial_solution()
-    # changingRules.routeBuilder.pass_initial_solution(
-        # [[0, 50, 48, 71, 46, 54, 44, 43, 67, 45, -1, 59, 57, 62, 64, 68, 49, 60, 63, 55, 69, 0],
-         # [0, 58, 70, 52, 51, 56, 61, 65, 66, 53, 42, -1, 47, 0]])
     changingRules.routeBuilder.multiple_neighborhood_search()
-    changingRules.routeBuilder.add_unassigned_tasks()
-    print(changingRules.routeBuilder.get_feasibility([[0, 70, 52, 56, 61, 65, 51, 66, 67, 69, 42, -1, 47, 0]], [1]))
     print(changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
     changingRules.get_station_info_by_moment(3600)
-    print(changingRules.calculate_loss())
+    print(sum(changingRules.calculate_loss()))
     print(changingRules.calculate_excess_demand())
     print(changingRules.calculate_scheduled_demand())
     print(changingRules.show_bike_distribution())
-    '''
+
+
+def dynamic_method():
+    changingRules = ChangingRules()
+    changingRules.prepare_route_builder()
     _current_time = 0
     _anticipation_horizon = 600
     _num_time_slices = 6
@@ -256,12 +254,15 @@ if __name__ == '__main__':
         changingRules.get_routed_result(_current_time + _anticipation_horizon)
     changingRules.stimulate(_num_time_slices * _anticipation_horizon)
     changingRules.get_station_info_by_moment(_num_time_slices * _anticipation_horizon)
-    print(changingRules.calculate_loss())
+    print(sum(changingRules.calculate_loss()))
     print(changingRules.routeBuilder.evaluate_solution_by_total_distance(
         [changingRules.routeBuilder.fixedRoutes[0] + [0], changingRules.routeBuilder.fixedRoutes[1] + [0]]))
     print(changingRules.calculate_excess_demand())
-    print(changingRules.show_bike_distribution())
     print(changingRules.calculate_scheduled_demand())
-    '''
+    print(changingRules.show_bike_distribution())
+
+
+if __name__ == '__main__':
+    dynamic_method()
     print('-----------------')
     print('finished')

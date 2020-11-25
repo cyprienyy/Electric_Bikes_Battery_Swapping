@@ -50,6 +50,8 @@ class RouteBuilder:
         self.infFactor = 1.1
         self.unassigned_tasks = set()
 
+        self.primary_sol = []
+
     @classmethod
     def copy_routes(cls, a):
         return [r.copy() for r in a]
@@ -60,6 +62,7 @@ class RouteBuilder:
             self.fixedRoutes.append([head])
             self.routes_info.append(
                 {'current_time': time_lb, 'time_ub': time_ub, 'current_load': 0, 'capacity': capacity})
+            self.primary_sol.append([])
 
     def add_tasks(self, *args):
         if self.fixedKeys:
@@ -299,6 +302,7 @@ class RouteBuilder:
 
     def pass_initial_solution(self, routes):
         self.routes = self.copy_routes(routes)
+        self.banList = []
         self.banList.append(self.evaluate_solution(self.routes, list(range(len(self.routes)))))
         self.best_feas_sol = self.copy_routes(self.routes)
         self.best_feas_obj = self.evaluate_solution(self.best_feas_sol, list(range(len(self.routes))))
@@ -773,6 +777,9 @@ class RouteBuilder:
         return _tasks
 
     def fix_sol(self, lp):
+        if any(self.primary_sol) and self.get_feasibility(self.primary_sol, list(range(len(self.primary_sol)))):
+            if self.evaluate_solution(self.primary_sol, list(range(len(self.primary_sol)))) < self.best_feas_obj:
+                self.pass_initial_solution(self.primary_sol)
         _res = []
         for i, r in enumerate(self.best_feas_sol):
             s_jr = np.zeros(len(r))
@@ -816,6 +823,7 @@ class RouteBuilder:
             for _, j in enumerate(r[cur + 1:-1]):
                 del self.key2Task[j]
             '''
+            self.primary_sol[i] = r[cur:]
             temp_r = [r[cur], r[-1]]
             self.best_feas_sol[i] = temp_r
         self.routes = self.copy_routes(self.best_feas_sol)

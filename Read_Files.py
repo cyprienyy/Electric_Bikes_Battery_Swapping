@@ -77,17 +77,17 @@ def resolve_str_2_int(x):
 
 
 if __name__ == '__main__':
-    file_path = r'.\solomon_25\C208.txt'
+    file_path = r'.\solomon_25\R211.txt'
     _info, _mat = read_single_soloman(file_path)
     _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
     _dis_mat = np.around(_dis_mat, 1)
-    _vehicle_num = 3
+    _vehicle_num = 6
     routeBuilder = RouteBuilderForSoloman(_dis_mat, _dis_mat)
     routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                  [_t_win[0, 1]] * _vehicle_num, [_capacity] * _vehicle_num)
     routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:], [1] * 25)
     routeBuilder.build_initial_solution()
-    print(routeBuilder.get_feasibility(routeBuilder.routes, range(3)))
+    print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
     routeBuilder.print_sol()
     print(routeBuilder.get_sol_schedule())
     print(routeBuilder.best_feas_obj)
