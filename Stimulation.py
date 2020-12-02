@@ -74,6 +74,8 @@ class Station:
         self.onsiteVehicles = Counter()
         self.bikesRecord = defaultdict(Counter)
         self.record(0)
+        self.real_value = []
+        self.predict_value = []
 
     def process_event(self, undefined_event, event_list):
         if type(undefined_event) == DemandEvent:
@@ -125,6 +127,8 @@ class Station:
     def change_batteries_of_bikes(self, current_time):
         bikes = list(self.numBikes.elements())
         out_bikes = [x for x in bikes if x <= 60]
+        if not self.real_value:
+            self.real_value.append(len(out_bikes))
         batteries = list(self.onsiteVehicles.elements())
         available_batteries = [x for x in batteries if x >= current_time]
         out_bikes.sort()

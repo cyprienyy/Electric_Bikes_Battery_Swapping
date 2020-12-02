@@ -20,7 +20,7 @@ neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'no
 
 class Task:
     # def __init__(self, location, start_time, end_time, task_demand, service_time):
-    def __init__(self, location, start_time, end_time, task_demand, service_time, w_i):
+    def __init__(self, location, start_time, end_time, task_demand, service_time, w_i, H=3600, loss=0):
         self.location = location
         self.startTime = start_time
         self.endTime = end_time
@@ -28,7 +28,9 @@ class Task:
         # self.onRoute = None
         self.serviceTime = service_time
         self.w_i = w_i
-        self.r_mrt = self.endTime - self.startTime
+        self.loss = loss
+        self.H = H
+        # self.r_mrt = self.endTime - self.startTime
 
 
 class RouteBuilder:
@@ -118,9 +120,20 @@ class RouteBuilder:
             for j in range(0, len(r) - 1):
                 current_time = current_time + self.get_service_time(r[j]) + self.t_ij[
                     self.trans_key_to_station(r[j]), self.trans_key_to_station(r[j + 1])]
-                total_ob = total_ob + self.quadratic_response_time_cost_of_task(r[j + 1], current_time)
+                total_ob = total_ob + self.linear_response_time_cost_of_task(r[j + 1], current_time)
         return total_ob
 
+    def linear_response_time_cost_of_task(self, task_key, task_arrive_time):
+        if task_key >= self.c_ij.shape[0]:
+            _task = self.key2Task[task_key]
+            if task_arrive_time > _task.endTime:
+                return round(_task.loss * (task_arrive_time - _task.endTime) / (_task.H - _task.endTime), 1)
+            else:
+                return 0
+        else:
+            return 0
+
+    '''
     def quadratic_response_time_cost_of_task(self, task_key, task_arrive_time):
         """
         以二次函数计算task的response time导致的惩罚。
@@ -146,6 +159,7 @@ class RouteBuilder:
             return _task.w_i / _task.r_mrt * (min(_t_i, _task.r_mrt) + 2 * max(0, _t_i - _task.r_mrt))
         else:
             return 0
+    '''
 
     def get_feasibility(self, routes, tour_id):
         """
@@ -209,7 +223,9 @@ class RouteBuilder:
             return self.key2Task[task_key].startTime
 
     def get_service_time(self, task_key):
-        if task_key < self.c_ij.shape[0]:
+        if task_key < 0:
+            return 180
+        elif task_key < self.c_ij.shape[0]:
             return 0
         else:
             return self.key2Task[task_key].serviceTime
@@ -714,7 +730,7 @@ class RouteBuilder:
                     if neighbor[2]:
                         if neighbor[1]:
                             if self.evaluate_solution(self.routes, range(len(self.routes))) <= self.best_feas_obj - 0.1:
-                                print('Found A Better Solution')
+                                # print('Found A Better Solution')
                                 self.best_feas_sol = self.copy_routes(self.routes)
                                 self.best_feas_obj = self.evaluate_solution(self.best_feas_sol,
                                                                             range(len(self.best_feas_sol)))

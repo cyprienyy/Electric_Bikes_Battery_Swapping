@@ -8,7 +8,7 @@ file_path = r'.\dm.npy'
 _dis_mat = np.load(file_path)
 _dis_mat = _dis_mat.astype(int)
 _dis_mat = _dis_mat[:41, :41]
-_t_mat = _dis_mat / 250 * 60
+_t_mat = _dis_mat / 600 * 60
 _t_mat = np.around(_t_mat, 0).astype(int)
 _t_mat = _t_mat[:41, :41]
 _vehicle_num = 2
@@ -106,7 +106,11 @@ class ChangingRules:
         for info in self.station_info:
             for bl in BATTERY_LEVEL:
                 res[bl] = res[bl] + info[1][0][bl // 10]
-        return res
+        full_battery = 0
+        for bl in res.keys():
+            if bl <= 60:
+                full_battery = full_battery + res[bl]
+        return res, full_battery
 
     def prepare_route_builder(self):
         self.routeBuilder = RouteBuilderByDistance(_dis_mat, _t_mat)
@@ -121,6 +125,7 @@ class ChangingRules:
                 continue
             _task = self.rule_2(info)
             if _task:
+                self.stations[i].predict_value.append(_task[2])
                 _tasks.append((i + 1,) + _task)
         _tasks = sorted(_tasks, key=lambda x: x[5], reverse=True)
         _tasks = _tasks[0:30]
@@ -138,7 +143,7 @@ class ChangingRules:
 
     def get_banned_stations(self):
         self.banned_stations = []
-        print(self.routeBuilder.activeKeys)
+        # print(self.routeBuilder.activeKeys)
         for key in list(self.routeBuilder.activeKeys):
             self.banned_stations.append(self.routeBuilder.trans_key_to_station(key) - 1)
         return
@@ -148,6 +153,7 @@ class ChangingRules:
         for key in self.routeBuilder.activeKeys:
             info = self.station_info[self.routeBuilder.trans_key_to_station(key) - 1]
             new_task_demand = self.rule_3(info)
+            self.stations[self.routeBuilder.trans_key_to_station(key) - 1].predict_value.append(new_task_demand)
             new_w_i = self.get_station_weight_1(info[1][0])
             self.routeBuilder.key2Task[key].demand = new_task_demand
             self.routeBuilder.key2Task[key].w_i = new_w_i
@@ -245,6 +251,7 @@ def static_method():
     print(changingRules.calculate_excess_demand())
     print(changingRules.calculate_scheduled_demand())
     print(changingRules.show_bike_distribution())
+    return
 
 
 def dynamic_method():
@@ -277,9 +284,11 @@ def dynamic_method():
     print(changingRules.calculate_excess_demand())
     print(changingRules.calculate_scheduled_demand())
     print(changingRules.show_bike_distribution())
+    print(len(changingRules.charge_schedule))
+    return
 
 
 if __name__ == '__main__':
-    dynamic_method()
+    static_method()
     print('-----------------')
     print('finished')
