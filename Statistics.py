@@ -92,4 +92,4 @@ def calculate_loss_1():
 
 
 if __name__ == '__main__':
-    write_csv()
+    calculate_original_loss()

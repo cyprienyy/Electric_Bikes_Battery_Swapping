@@ -153,6 +153,22 @@ class ChangingRules:
             self.routeBuilder.key2Task[key].w_i = new_w_i
         return
 
+    def update_vehicle_load(self, current_time):
+        for i, route in enumerate(self.routeBuilder.fixedRoutes):
+            load = 0
+            for j in route:
+                station_j = self.routeBuilder.trans_key_to_station(j)
+                if station_j == 0:
+                    load = 0
+                else:
+                    load += self.routeBuilder.key2Task[j].demand
+                    leave_time = list(self.stations[station_j - 1].onsiteVehicles.keys())
+                    if leave_time:
+                        if leave_time[0] < current_time:
+                            load -= self.stations[station_j - 1].onsiteVehicles[leave_time[0]]
+            self.routeBuilder.routes_info[i]['current_load'] = load
+        return
+
     '''
     @classmethod
     def rule_1(cls, info):
@@ -244,6 +260,7 @@ def dynamic_method():
 
         changingRules.get_station_info_by_moment(_current_time)
         changingRules.update_existed_tasks()
+        changingRules.update_vehicle_load(_current_time)
         if _current_time == 0:
             changingRules.produce_tasks()
 
