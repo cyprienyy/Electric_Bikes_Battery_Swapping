@@ -94,7 +94,8 @@ class RouteBuilder:
         To do:
         改掉evaluate_solution_by_time_func_of_task()。
         """
-        return round(self.evaluate_solution_by_time_func_of_task(routes, tour_id), 1)
+        return self.evaluate_solution_by_total_distance(routes) + self.evaluate_solution_by_time_func_of_task(routes,
+                                                                                                              tour_id)
 
     def evaluate_solution_by_total_distance(self, routes):
         """
