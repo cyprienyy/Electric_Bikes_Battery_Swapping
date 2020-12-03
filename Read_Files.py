@@ -40,6 +40,28 @@ def resolve_soloman(info, mat):
     return vehicle_num, capacity, dis_mat, demand, t_win, t_ser
 
 
+def solve_soloman():
+    file_path = r'.\solomon_25\R211.txt'
+    _info, _mat = read_single_soloman(file_path)
+    _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
+    _dis_mat = np.around(_dis_mat, 1)
+    _vehicle_num = 6
+    routeBuilder = RouteBuilderForSoloman(_dis_mat, _dis_mat)
+    routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
+                                 [_t_win[0, 1]] * _vehicle_num, [_capacity] * _vehicle_num)
+    routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:], [1] * 25)
+    routeBuilder.build_initial_solution()
+    print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
+    routeBuilder.print_sol()
+    print(routeBuilder.get_sol_schedule())
+    print(routeBuilder.best_feas_obj)
+    routeBuilder.multiple_neighborhood_search()
+    routeBuilder.print_sol()
+    print(routeBuilder.get_sol_schedule())
+    print(routeBuilder.best_feas_obj)
+    return
+
+
 def resolve_station_inventory(station_inventory_path='.\station_inventory.npy'):
     station_inventory = np.load(station_inventory_path)
 
@@ -114,6 +136,7 @@ def transform_soloman(filepath=r'.\solomon_25\R211.txt'):
 
     return
 
+
 def resolve_self_created_case(filename):
     with open(filename, 'r') as file_to_read:
         pos = []
@@ -132,34 +155,13 @@ def resolve_self_created_case(filename):
 
     return pos
 
-def solve_soloman():
-    file_path = r'.\solomon_25\R211.txt'
-    _info, _mat = read_single_soloman(file_path)
-    _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
-    _dis_mat = np.around(_dis_mat, 1)
-    _vehicle_num = 6
-    routeBuilder = RouteBuilderForSoloman(_dis_mat, _dis_mat)
-    routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
-                                 [_t_win[0, 1]] * _vehicle_num, [_capacity] * _vehicle_num)
-    routeBuilder.add_tasks(list(range(1, 26)), _t_win[1:, 0], _t_win[1:, 1], _demand[1:], _t_ser[1:], [1] * 25)
-    routeBuilder.build_initial_solution()
-    print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
-    routeBuilder.print_sol()
-    print(routeBuilder.get_sol_schedule())
-    print(routeBuilder.best_feas_obj)
-    routeBuilder.multiple_neighborhood_search()
-    routeBuilder.print_sol()
-    print(routeBuilder.get_sol_schedule())
-    print(routeBuilder.best_feas_obj)
-    return
-
 
 def solve_self_created_case(filepath=r'.\result.csv'):
     pos = resolve_self_created_case(filepath)
     _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
-    _c_ij = np.array(pos[1:_station_num+2])
-    _t_ij = _c_ij/1
-    _nodes_info = pos[_station_num+2:]
+    _c_ij = np.array(pos[1:_station_num + 2])
+    _t_ij = _c_ij / 1
+    _nodes_info = pos[_station_num + 2:]
     _nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss = zip(*_nodes_info)
     _nodes = list(map(int, _nodes))
     _t_lower_bound = list(map(int, _t_lower_bound))
@@ -176,12 +178,14 @@ def solve_self_created_case(filepath=r'.\result.csv'):
     routeBuilder.build_initial_solution()
     print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
     routeBuilder.print_sol()
-    print(routeBuilder.get_sol_schedule())
+    # print(routeBuilder.get_sol_schedule())
     print(routeBuilder.best_feas_obj)
     routeBuilder.multiple_neighborhood_search()
     routeBuilder.print_sol()
     print(routeBuilder.get_sol_schedule())
     print(routeBuilder.best_feas_obj)
+    print(routeBuilder.evaluate_solution_by_total_distance(routeBuilder.routes))
+    print(print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num))))
     return
 
 
