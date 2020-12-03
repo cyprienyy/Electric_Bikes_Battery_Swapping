@@ -185,7 +185,7 @@ def solve_self_created_case(filepath=r'.\result.csv'):
     print(routeBuilder.get_sol_schedule())
     print(routeBuilder.best_feas_obj)
     print(routeBuilder.evaluate_solution_by_total_distance(routeBuilder.routes))
-    print(print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num))))
+    print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num)))
     return
 
 
