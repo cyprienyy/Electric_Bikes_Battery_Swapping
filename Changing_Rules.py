@@ -2,6 +2,7 @@ from Stimulation import Station, EventList, BATTERY_LEVEL, DemandEvent, ChargeEv
 from Routes import RouteBuilder, RouteBuilderByDistance
 import numpy as np
 from Read_Files import resolve_station_inventory
+import csv
 
 # 在这里设置好_dis_mat, _t_mat, _capacity, _vehicle_num
 file_path = r'.\dm.npy'
@@ -126,13 +127,21 @@ class ChangingRules:
             _task = self.rule_2(info)
             if _task:
                 self.stations[i].predict_value.append(_task[2])
-                _tasks.append((i + 1,) + _task)
+                _tasks.append((i + 1,) + _task + (3600, 0))
         _tasks = sorted(_tasks, key=lambda x: x[5], reverse=True)
         _tasks = _tasks[0:30]
+
+        '''
+        with open('tasks.csv', 'w', newline='') as f:
+            csv_writer = csv.writer(f, delimiter=',')
+            csv_writer.writerows(_tasks)
+        '''
+
         _tasks = list(zip(*_tasks))
         # location, start_time, end_time, task_demand, service_time, w_i
         if _tasks:
-            self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5])
+            self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5], _tasks[6],
+                                        _tasks[7])
 
     def get_routed_result(self, lp):
         _res = self.routeBuilder.fix_sol(lp)
