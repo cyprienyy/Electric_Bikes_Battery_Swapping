@@ -99,7 +99,7 @@ def resolve_str_2_int(x):
         return int(x)
 
 
-def transform_soloman(filepath=r'.\solomon_25\R211.txt'):
+def transform_soloman(filepath=r'.\solomon_25\RC201.txt'):
     _info, _mat = read_single_soloman(filepath)
     _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
 
@@ -107,9 +107,10 @@ def transform_soloman(filepath=r'.\solomon_25\R211.txt'):
 
     _vehicle_num = 2
 
-    _capacity = _capacity
+    # _capacity = _capacity
+    _capacity = 200
 
-    H = _t_win[0, 1]
+    H = _t_win[0, 1] * 2
 
     _dis_mat = np.around(_dis_mat, 1)
 
@@ -128,7 +129,7 @@ def transform_soloman(filepath=r'.\solomon_25\R211.txt'):
 
     _nodes_info = list(zip(_nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss))
 
-    with open('result.csv', 'w', encoding='utf-8', newline='') as f:
+    with open('RC201.csv', 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow([_station_num, _vehicle_num, _capacity, H])
         writer.writerows(_dis_mat.tolist())
@@ -156,7 +157,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-def solve_self_created_case(filepath=r'.\result.csv'):
+def solve_self_created_case(filepath=r'.\RC201.csv'):
     pos = resolve_self_created_case(filepath)
     _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
     _c_ij = np.array(pos[1:_station_num + 2])
@@ -190,6 +191,7 @@ def solve_self_created_case(filepath=r'.\result.csv'):
 
 
 if __name__ == '__main__':
+    transform_soloman()
     solve_self_created_case()
     '''
     print(routeBuilder.best_feas_sol)
