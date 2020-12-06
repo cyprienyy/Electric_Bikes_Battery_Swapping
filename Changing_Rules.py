@@ -3,13 +3,14 @@ from Routes import RouteBuilder, RouteBuilderByDistance
 import numpy as np
 from Read_Files import resolve_station_inventory
 import csv
+import re
 
 # 在这里设置好_dis_mat, _t_mat, _capacity, _vehicle_num
 file_path = r'.\dm.npy'
 _dis_mat = np.load(file_path)
 _dis_mat = _dis_mat.astype(int)
 _dis_mat = _dis_mat[:41, :41]
-_t_mat = _dis_mat / 600 * 60
+_t_mat = _dis_mat / 500 * 60
 _t_mat = np.around(_t_mat, 0).astype(int)
 _t_mat = _t_mat[:41, :41]
 _vehicle_num = 2
@@ -114,7 +115,7 @@ class ChangingRules:
         return res, full_battery
 
     def prepare_route_builder(self):
-        self.routeBuilder = RouteBuilderByDistance(_dis_mat, _t_mat)
+        self.routeBuilder = RouteBuilder(_dis_mat, _t_mat)
         self.routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                           [3600] * _vehicle_num,
                                           [200] * _vehicle_num)  # 应该添加一些宏观变量用于控制车辆的起始点，终点，时间上限与时间下限
@@ -131,11 +132,9 @@ class ChangingRules:
         _tasks = sorted(_tasks, key=lambda x: x[5], reverse=True)
         _tasks = _tasks[0:30]
 
-        '''
         with open('tasks.csv', 'w', newline='') as f:
             csv_writer = csv.writer(f, delimiter=',')
             csv_writer.writerows(_tasks)
-        '''
 
         _tasks = list(zip(*_tasks))
         # location, start_time, end_time, task_demand, service_time, w_i
@@ -149,6 +148,28 @@ class ChangingRules:
         for c in _res:
             self.eventList.add_event(ChargeEvent(c[1], c[0], c[2], c[3]))
         return
+
+    def get_tasks_from_csv(self):
+
+        with open('newtask.csv', 'r') as file_to_read:
+            _tasks = []
+            while True:
+                lines = file_to_read.readline()  # 整行读取数据
+                if not lines:
+                    break
+                    pass
+                if re.match(r'\s*[0-9]', lines) is not None:
+                    lines = lines.strip()
+                    lines = lines.split(',')
+                    lines = list(map(int, lines))
+                    _tasks.append(lines)  # 添加新读取的数据
+                pass
+        pass
+
+        _tasks = list(zip(*_tasks))
+        if _tasks:
+            self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5], _tasks[6],
+                                        [tk*1 for tk in _tasks[7]])
 
     def get_banned_stations(self):
         self.banned_stations = []
@@ -170,6 +191,7 @@ class ChangingRules:
 
     def update_vehicle_load(self, current_time):
         for i, route in enumerate(self.routeBuilder.fixedRoutes):
+            # print('路径',i+1,'原load',self.routeBuilder.routes_info[i]['current_load'])
             load = 0
             for j in route:
                 station_j = self.routeBuilder.trans_key_to_station(j)
@@ -182,6 +204,7 @@ class ChangingRules:
                         if leave_time[0] < current_time:
                             load -= self.stations[station_j - 1].onsiteVehicles[leave_time[0]]
             self.routeBuilder.routes_info[i]['current_load'] = load
+            # print('路径', i + 1, '新load', self.routeBuilder.routes_info[i]['current_load'])
         return
 
     '''
@@ -241,6 +264,7 @@ class ChangingRules:
             for time_label in station.loss.keys():
                 loss = loss + station.loss[time_label]
             station_loss.append(loss)
+        print(station_loss)
         return station_loss
 
 
@@ -249,17 +273,23 @@ def static_method():
     changingRules.prepare_route_builder()
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
-    changingRules.produce_tasks()
+    changingRules.get_tasks_from_csv()
     changingRules.routeBuilder.build_initial_solution()
+    print('路径成本',
+          changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
+    print('总成本', changingRules.routeBuilder.best_feas_obj)
     changingRules.routeBuilder.multiple_neighborhood_search()
-    print(changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
+    print('路径成本',
+          changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
+    print('总成本', changingRules.routeBuilder.best_feas_obj)
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
     changingRules.get_station_info_by_moment(3600)
-    print(sum(changingRules.calculate_loss()))
-    print(changingRules.calculate_excess_demand())
-    print(changingRules.calculate_scheduled_demand())
-    print(changingRules.show_bike_distribution())
+    print('未分配任务', changingRules.routeBuilder.unassigned_tasks)
+    print('总损失', sum(changingRules.calculate_loss()))
+    print('分配的多余换电量', changingRules.calculate_excess_demand())
+    print('分配的总换电量', changingRules.calculate_scheduled_demand())
+    print('换电后车辆情况', changingRules.show_bike_distribution())
     return
 
 
@@ -290,6 +320,7 @@ def dynamic_method():
     print(sum(changingRules.calculate_loss()))
     print(changingRules.routeBuilder.evaluate_solution_by_total_distance(
         [changingRules.routeBuilder.fixedRoutes[0] + [0], changingRules.routeBuilder.fixedRoutes[1] + [0]]))
+    print('未分配任务', changingRules.routeBuilder.unassigned_tasks)
     print(changingRules.calculate_excess_demand())
     print(changingRules.calculate_scheduled_demand())
     print(changingRules.show_bike_distribution())

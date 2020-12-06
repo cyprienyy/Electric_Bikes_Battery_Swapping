@@ -127,7 +127,7 @@ class RouteBuilder:
     def linear_response_time_cost_of_task(self, task_key, task_arrive_time):
         if task_key >= self.c_ij.shape[0]:
             _task = self.key2Task[task_key]
-            if task_arrive_time > _task.endTime:
+            if task_arrive_time > _task.endTime and _task.loss != 0:
                 return round(_task.loss * (task_arrive_time - _task.endTime) / (_task.H - _task.endTime), 1)
             else:
                 return 0
