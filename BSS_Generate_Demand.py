@@ -22,7 +22,7 @@ limit_t = T - np.max(time_matrix)
 
 demands = []
 # 通过这里设置时间内需求上限
-max_num_d = 20
+max_num_d = 30
 for i in range(len(distance_matrix)):
     lamda = T / max_num_d
     interval = np.around(np.random.exponential(lamda, max_num_d), 0).astype(int)
@@ -38,4 +38,4 @@ for i in range(len(distance_matrix)):
                 [i + 1, k + 1, t, t + time_matrix[i, k], battery_consumption[i, k], int(np.random.randint(1, 4, 1))])
 
 demands = np.array(demands)
-# np.save('demands', demands)
+# np.save('demands-30', demands)

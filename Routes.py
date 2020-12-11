@@ -225,7 +225,7 @@ class RouteBuilder:
 
     def get_service_time(self, task_key):
         if task_key < 0:
-            return 180
+            return 0
         elif task_key < self.c_ij.shape[0]:
             return 0
         else:
@@ -301,6 +301,15 @@ class RouteBuilder:
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
+                        if add_move is None:
+                            j = len(sol[num_tour]) - 1
+                            sigma_1 = sol[num_tour][:j]
+                            sigma_2 = sol[num_tour][j:]
+                            add_f = all(
+                                self.get_feasibility_for_solution_construction([sigma_1 + [satellite] + sigma_2],
+                                                                               [num_tour]))
+                            if add_f:
+                                add_move = (satellite, j)
                         if add_move:
                             i = add_move[0]
                             j = add_move[1]
@@ -443,6 +452,15 @@ class RouteBuilder:
                                 if add_obj < best_add_sol and add_f:
                                     add_move = (satellite, j)
                                     best_add_sol = add_obj
+                        if add_move is None:
+                            j = len(sol[num_tour]) - 1
+                            sigma_1 = sol[num_tour][:j]
+                            sigma_2 = sol[num_tour][j:]
+                            add_f = all(
+                                self.get_feasibility_for_solution_construction([sigma_1 + [satellite] + sigma_2],
+                                                                               [num_tour]))
+                            if add_f:
+                                add_move = (satellite, j)
                         if add_move:
                             i = add_move[0]
                             j = add_move[1]
@@ -510,9 +528,11 @@ class RouteBuilder:
                             f = all(r_feas_temp)
                         else:
                             if l < k:
-                                sigma_5.remove(route_i[k])
+                                # sigma_5.remove(route_i[k])
+                                sigma_5.pop(k - l - 1)
                             else:
-                                sigma_4.remove(route_i[k])
+                                # sigma_4.remove(route_i[k])
+                                sigma_4.pop(k)
                             obj = self.evaluate_solution([sigma_4 + sigma_2 + sigma_5], [i])
                             obj = obj + S_sol - S_i
                             obj = round(obj, 1)
@@ -542,9 +562,11 @@ class RouteBuilder:
                 routes[j] = sigma_4 + sigma_2 + sigma_5
             else:
                 if l <= k:
-                    sigma_5.remove(routes[i][k])
+                    # sigma_5.remove(routes[i][k])
+                    sigma_5.pop(k - l - 1)
                 else:
-                    sigma_4.remove(routes[i][k])
+                    # sigma_4.remove(routes[i][k])
+                    sigma_4.pop(k)
                 routes[i] = sigma_4 + sigma_2 + sigma_5
         return routes, savef, bestSol < self.last_sol_obj
 

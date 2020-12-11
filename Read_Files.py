@@ -110,9 +110,9 @@ def transform_soloman(filepath=r'.\solomon_25\RC201.txt'):
     # _capacity = _capacity
     _capacity = 200
 
-    H = _t_win[0, 1] * 2
+    H = _t_win[0, 1] * 2.5
 
-    _dis_mat = np.around(_dis_mat, 1)
+    _dis_mat = np.around(_dis_mat, 1) * 10
 
     _nodes = list(range(1, _station_num + 1))
     _t_lower_bound = [0] * _station_num
@@ -176,6 +176,7 @@ def solve_self_created_case(filepath=r'.\RC201.csv'):
     routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                  [H] * _vehicle_num, [_capacity] * _vehicle_num)
     routeBuilder.add_tasks(_nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss)
+    '''
     routeBuilder.build_initial_solution()
     print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
     routeBuilder.print_sol()
@@ -187,11 +188,18 @@ def solve_self_created_case(filepath=r'.\RC201.csv'):
     print(routeBuilder.best_feas_obj)
     print(routeBuilder.evaluate_solution_by_total_distance(routeBuilder.routes))
     print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num)))
+    '''
+    # '''
+    routes = [[0, 48, 46, 45, 44, 47, 49, 51, 50, -1, 0], [0, 28, 32, 33, 34, 30, 31, 29, 27, -1, 36, 37, 35, 39, 41, 42, 43, 40, 38, -1, 0]]
+    print(routeBuilder.get_feasibility(routes, range(_vehicle_num)))
+    print(routeBuilder.evaluate_solution_by_total_distance(routes))
+    print(routeBuilder.evaluate_solution(routes, range(_vehicle_num)))
+    # '''
     return
 
 
 if __name__ == '__main__':
-    transform_soloman()
+    # transform_soloman()
     solve_self_created_case()
     '''
     print(routeBuilder.best_feas_sol)

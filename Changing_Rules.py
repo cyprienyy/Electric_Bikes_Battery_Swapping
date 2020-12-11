@@ -10,7 +10,7 @@ file_path = r'.\dm.npy'
 _dis_mat = np.load(file_path)
 _dis_mat = _dis_mat.astype(int)
 _dis_mat = _dis_mat[:41, :41]
-_t_mat = _dis_mat / 500 * 60
+_t_mat = _dis_mat / 300 * 60
 _t_mat = np.around(_t_mat, 0).astype(int)
 _t_mat = _t_mat[:41, :41]
 _vehicle_num = 2
@@ -25,7 +25,7 @@ class ChangingRules:
         self.stations = [Station(next(resolve_station_inventory_iter)) for _ in range(station_num)]
 
         self.eventList = EventList()
-        demands = np.load('demands.npy')
+        demands = np.load('.\Demand and Inflow\demands-15.npy')
         demands[:, 4] = np.ceil(demands[:, 4] / 10) * 10
         demands = demands.tolist()
         for d in demands:
@@ -169,7 +169,7 @@ class ChangingRules:
         _tasks = list(zip(*_tasks))
         if _tasks:
             self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5], _tasks[6],
-                                        [tk*1 for tk in _tasks[7]])
+                                        [tk * 1 for tk in _tasks[7]])
 
     def get_banned_stations(self):
         self.banned_stations = []
@@ -273,7 +273,7 @@ def static_method():
     changingRules.prepare_route_builder()
     changingRules.get_station_info_by_moment(0)
     changingRules.update_existed_tasks()
-    changingRules.get_tasks_from_csv()
+    changingRules.produce_tasks()
     changingRules.routeBuilder.build_initial_solution()
     print('路径成本',
           changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
@@ -282,6 +282,7 @@ def static_method():
     print('路径成本',
           changingRules.routeBuilder.evaluate_solution_by_total_distance(changingRules.routeBuilder.best_feas_sol))
     print('总成本', changingRules.routeBuilder.best_feas_obj)
+    changingRules.routeBuilder.print_sol()
     changingRules.get_routed_result(3600)
     changingRules.stimulate(3600)
     changingRules.get_station_info_by_moment(3600)
@@ -325,10 +326,12 @@ def dynamic_method():
     print(changingRules.calculate_scheduled_demand())
     print(changingRules.show_bike_distribution())
     print(len(changingRules.charge_schedule))
+    print([changingRules.routeBuilder.fixedRoutes[0] + [0], changingRules.routeBuilder.fixedRoutes[1] + [0]])
     return
 
 
 if __name__ == '__main__':
     static_method()
+    dynamic_method()
     print('-----------------')
     print('finished')
