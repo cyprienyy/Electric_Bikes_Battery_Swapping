@@ -25,7 +25,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-filepath = r'.\RC201.csv'
+filepath = r'.\RC101.csv'
 pos = resolve_self_created_case(filepath)
 _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
 _c_ij = np.array(pos[1:_station_num + 2])

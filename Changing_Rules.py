@@ -25,7 +25,7 @@ class ChangingRules:
         self.stations = [Station(next(resolve_station_inventory_iter)) for _ in range(station_num)]
 
         self.eventList = EventList()
-        demands = np.load('.\Demand and Inflow\demands-15.npy')
+        demands = np.load('demands.npy')
         demands[:, 4] = np.ceil(demands[:, 4] / 10) * 10
         demands = demands.tolist()
         for d in demands:
@@ -169,7 +169,7 @@ class ChangingRules:
         _tasks = list(zip(*_tasks))
         if _tasks:
             self.routeBuilder.add_tasks(_tasks[0], _tasks[1], _tasks[2], _tasks[3], _tasks[4], _tasks[5], _tasks[6],
-                                        [tk * 1 for tk in _tasks[7]])
+                                        [tk * 20 for tk in _tasks[7]])
 
     def get_banned_stations(self):
         self.banned_stations = []
@@ -331,7 +331,6 @@ def dynamic_method():
 
 
 if __name__ == '__main__':
-    static_method()
     dynamic_method()
     print('-----------------')
     print('finished')
