@@ -202,6 +202,7 @@ if __name__ == '__main__':
     tsp_route = get_tsp_route(_c_ij)
     print(get_most_saved_distance(routes, tsp_route, _q_i, _a_i, _b_i, _capacity))
     print(get_greedy_saved_distance(routes, tsp_route, _q_i, _a_i, _b_i, _capacity))
-    print(get_tsp_route(_c_ij))
+    print(tsp_route)
     print(routes)
     print('Main')
+    print(evaluate_saved_distance(set(),tsp_route))
