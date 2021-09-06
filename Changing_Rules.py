@@ -331,6 +331,8 @@ def dynamic_method():
 
 
 if __name__ == '__main__':
-    dynamic_method()
+    static_method()
+    for i in range(10):
+        dynamic_method()
     print('-----------------')
     print('finished')

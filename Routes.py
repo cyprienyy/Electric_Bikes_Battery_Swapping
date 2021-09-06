@@ -7,12 +7,12 @@ lower_limit = 0
 
 # 与Multiple Neighborhood Search相关宏观变量。
 maxIter = 100
-maxNbIter = 30
-maxNonImpIter = 15
-maxNbNonImpIter = 7
-INF_FACTOR = 1.1
+maxNbIter = 15
+maxNonImpIter = 10
+maxNbNonImpIter = 5
+INF_FACTOR = 1.2
 INF_STEP_UP = 0.05
-INF_STEP_DOWN = 0.02
+INF_STEP_DOWN = 0.03
 INF_LOWER_BOUND = 1
 # neighborhoods = ['node_relocation']
 neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'nodes_swap']

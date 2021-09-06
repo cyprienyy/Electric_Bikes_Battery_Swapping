@@ -157,7 +157,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-def solve_self_created_case(filepath=r'.\RC101.csv'):
+def solve_self_created_case(filepath=r'.\R201.csv'):
     pos = resolve_self_created_case(filepath)
     _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
     _c_ij = np.array(pos[1:_station_num + 2])
@@ -171,11 +171,11 @@ def solve_self_created_case(filepath=r'.\RC101.csv'):
     _t_ser = list(map(int, _t_ser))
     _w_i = list(map(int, _w_i))
     _H = list(map(int, _H))
-
     routeBuilder = RouteBuilder(_c_ij, _t_ij)
     routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
                                  [H] * _vehicle_num, [_capacity] * _vehicle_num)
     routeBuilder.add_tasks(_nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss)
+    '''
     routeBuilder.build_initial_solution()
     print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
     routeBuilder.print_sol()
@@ -188,11 +188,11 @@ def solve_self_created_case(filepath=r'.\RC101.csv'):
     print(routeBuilder.evaluate_solution_by_total_distance(routeBuilder.routes))
     print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num)))
     '''
-    routes = [[0, 48, 46, 45, 44, 47, 49, 51, 50, -1, 0], [0, 28, 32, 33, 34, 30, 31, 29, 27, -1, 36, 37, 35, 39, 41, 42, 43, 40, 38, -1, 0]]
+    routes = [[0, 32, 39, 28, 31, 44, 33, 34, 46, 35, 29, 50, 38, 51, 27, 0],
+              [0, 47, 48, 30, 49, 40, 42, 43, 45, 37, 36, 41, 0]]
     print(routeBuilder.get_feasibility(routes, range(_vehicle_num)))
     print(routeBuilder.evaluate_solution_by_total_distance(routes))
     print(routeBuilder.evaluate_solution(routes, range(_vehicle_num)))
-    '''
     return
 
 
