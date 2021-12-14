@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 # 定义宏观变量。
 satellite = -1
@@ -8,14 +9,18 @@ lower_limit = 0
 # 与Multiple Neighborhood Search相关宏观变量。
 maxIter = 100
 maxNbIter = 15
-maxNonImpIter = 10
-maxNbNonImpIter = 5
+maxNonImpIter = 30
+maxNbNonImpIter = 7
 INF_FACTOR = 1.2
 INF_STEP_UP = 0.05
 INF_STEP_DOWN = 0.03
 INF_LOWER_BOUND = 1
 # neighborhoods = ['node_relocation']
-neighborhoods = ['node_relocation', 'inter_routes_2opt', 'intra_route_2opt', 'nodes_swap']
+neighborhoods = ['node_relocation',
+                 'inter_routes_2opt',
+                 'intra_route_2opt',
+                 'nodes_swap'
+                 ]
 
 
 class Task:
@@ -502,17 +507,27 @@ class RouteBuilder:
         saveMove = None
         savef = False
 
+        total_try = 0
+        for i, route_i in enumerate(routes):
+            total_try += len(route_i) - 1
+        do_or_not = [0] * (total_try - 10) + [1] * 10
+
         for i in range(len(routes)):
             route_i = routes[i]
             S_i = self.evaluate_solution([route_i], [i])
-            for j in range(len(routes)):
-                route_j = routes[j]
-                S_j = self.evaluate_solution([route_j], [j])
-                for k in range(1, len(route_i) - 1):
-                    sigma_1 = route_i[0:k]
-                    sigma_2 = route_i[k:k + 1]
-                    sigma_3 = route_i[k + 1:]
+            for k in range(1, len(route_i) - 1):
+                sigma_1 = route_i[0:k]
+                sigma_2 = route_i[k:k + 1]
+                sigma_3 = route_i[k + 1:]
+                random.shuffle(do_or_not)
+                count = -1
+                for j in range(len(routes)):
+                    route_j = routes[j]
+                    S_j = self.evaluate_solution([route_j], [j])
                     for l in range(len(route_j) - 1):
+                        count += 1
+                        if do_or_not[count] == 0:
+                            continue
                         sigma_4 = route_j[0:l + 1]
                         sigma_5 = route_j[l + 1:]
                         if i != j:
@@ -547,6 +562,9 @@ class RouteBuilder:
                                 bestSol = obj
                                 saveMove = (i, k, j, l)
                                 savef = f
+                if count != len(do_or_not) - 1:
+                    raise Exception('relocation_random_error')
+
         if saveMove:
             i = saveMove[0]
             k = saveMove[1]
@@ -561,7 +579,7 @@ class RouteBuilder:
                 routes[i] = sigma_1 + sigma_3
                 routes[j] = sigma_4 + sigma_2 + sigma_5
             else:
-                if l <= k:
+                if l < k:
                     # sigma_5.remove(routes[i][k])
                     sigma_5.pop(k - l - 1)
                 else:
@@ -578,35 +596,60 @@ class RouteBuilder:
         saveMove = None
         savef = False
 
+        total_try = 0
+        len_routes = 0
+        for i, route_i in enumerate(routes):
+            len_routes += len(route_i) - 2
+        total_try += len_routes * (len_routes - 1) // 2
+        try_num = min(10 * len_routes, total_try)
+        do_or_not = [0] * (total_try - try_num) + [1] * try_num
+        random.shuffle(do_or_not)
+        count = -1
+
         for i in range(len(routes)):
             route_i = routes[i].copy()
             S_i = self.evaluate_solution([route_i], [i])
-            for j in range(i, len(routes)):
-                route_j = routes[j].copy()
-                S_j = self.evaluate_solution([route_j], [j])
-                for k in range(1, len(route_i) - 1):
+            for k in range(1, len(route_i) - 1):
+                for l in range(k + 1, len(route_i) - 1):
+                    count += 1
+                    if do_or_not[count] == 0:
+                        continue
+                    if route_i[k] != route_i[l]:
+                        route_i[k], route_i[l] = route_i[l], route_i[k]
+                        obj = self.evaluate_solution([route_i], [i])
+                        obj = obj + S_sol - S_i
+                        obj = round(obj, 1)
+                        r_feas_temp = r_feas.copy()
+                        r_feas_update = self.get_feasibility([route_i], [i])
+                        r_feas_temp[i] = r_feas_update[0]
+                        route_i[k], route_i[l] = route_i[l], route_i[k]
+                        f = all(r_feas_temp)
+                        if obj not in self.banList:
+                            if not f:
+                                obj = obj * self.infFactor
+                            if obj < bestSol:
+                                bestSol = obj
+                                saveMove = (i, k, i, l)
+                                savef = f
+
+                for j in range(i + 1, len(routes)):
+                    route_j = routes[j].copy()
+                    S_j = self.evaluate_solution([route_j], [j])
                     for l in range(1, len(route_j) - 1):
+                        count += 1
+                        if do_or_not[count] == 0:
+                            continue
                         if route_i[k] != route_j[l]:
-                            if i != j:
-                                route_i[k], route_j[l] = route_j[l], route_i[k]
-                                obj = self.evaluate_solution([route_i], [i])
-                                obj = obj + self.evaluate_solution([route_j], [j])
-                                obj = obj + S_sol - S_i - S_j
-                                obj = round(obj, 1)
-                                r_feas_temp = r_feas.copy()
-                                r_feas_update = self.get_feasibility([route_i, route_j], [i, j])
-                                r_feas_temp[i] = r_feas_update[0]
-                                r_feas_temp[j] = r_feas_update[1]
-                                route_i[k], route_j[l] = route_j[l], route_i[k]
-                            else:
-                                route_i[k], route_i[l] = route_i[l], route_i[k]
-                                obj = self.evaluate_solution([route_i], [i])
-                                obj = obj + S_sol - S_i
-                                obj = round(obj, 1)
-                                r_feas_temp = r_feas.copy()
-                                r_feas_update = self.get_feasibility([route_i], [i])
-                                r_feas_temp[i] = r_feas_update[0]
-                                route_i[k], route_i[l] = route_i[l], route_i[k]
+                            route_i[k], route_j[l] = route_j[l], route_i[k]
+                            obj = self.evaluate_solution([route_i], [i])
+                            obj = obj + self.evaluate_solution([route_j], [j])
+                            obj = obj + S_sol - S_i - S_j
+                            obj = round(obj, 1)
+                            r_feas_temp = r_feas.copy()
+                            r_feas_update = self.get_feasibility([route_i, route_j], [i, j])
+                            r_feas_temp[i] = r_feas_update[0]
+                            r_feas_temp[j] = r_feas_update[1]
+                            route_i[k], route_j[l] = route_j[l], route_i[k]
                             f = all(r_feas_temp)
                             if obj not in self.banList:
                                 if not f:
@@ -615,6 +658,8 @@ class RouteBuilder:
                                     bestSol = obj
                                     saveMove = (i, k, j, l)
                                     savef = f
+        if count != len(do_or_not) - 1:
+            raise Exception('exchange_random_error')
         if saveMove:
             i = saveMove[0]
             k = saveMove[1]
@@ -634,8 +679,21 @@ class RouteBuilder:
         for i in range(len(routes)):
             route_i = routes[i]
             S_i = self.evaluate_solution([route_i], [i])
+
+            len_route_i = len(route_i) - 2
+            total_try = len_route_i * (len_route_i - 1) // 2 - max((len_route_i - 1), 0)
+            try_num = min(10 * len_route_i, total_try)
+            do_or_not = [0] * (total_try - try_num) + [1] * try_num
+            random.shuffle(do_or_not)
+            count = -1
+
             for k in range(1, len(route_i) - 3):
                 for l in range(k + 2, len(route_i) - 1):  # 交换的是点k到点l,且把这种方式与swap区分开来了
+
+                    count += 1
+                    if do_or_not[count] == 0:
+                        continue
+
                     sigma_1 = route_i[0:k]
                     sigma_2 = route_i[k:l + 1]
                     sigma_2.reverse()
@@ -654,6 +712,8 @@ class RouteBuilder:
                             bestSol = obj
                             saveMove = (i, k, l)
                             savef = f
+            if count != len(do_or_not) - 1:
+                raise Exception('intra_2opt_random_error')
         if saveMove:
             i = saveMove[0]
             k = saveMove[1]
@@ -673,6 +733,18 @@ class RouteBuilder:
         saveMove = None
         savef = False
 
+        total_try = 0
+        len_routes = 0
+        for i, route_i in enumerate(routes):
+            len_route_i = len(route_i) - 1
+            len_routes += len_route_i
+            total_try -= len_route_i * (len_route_i - 1) // 2
+        total_try += len_routes * (len_routes - 1) // 2
+        try_num = min(10 * len_routes, total_try)
+        do_or_not = [0] * (total_try - try_num) + [1] * try_num
+        random.shuffle(do_or_not)
+        count = -1
+
         for i in range(len(routes)):
             route_i = routes[i]
             S_i = self.evaluate_solution([route_i], [i])
@@ -683,6 +755,11 @@ class RouteBuilder:
                     sigma_1 = route_i[0:k + 1]
                     sigma_2 = route_i[k + 1:]
                     for l in range(len(route_j) - 1):
+
+                        count += 1
+                        if do_or_not[count] == 0:
+                            continue
+
                         sigma_3 = route_j[0:l + 1]
                         sigma_4 = route_j[l + 1:]
                         obj = self.evaluate_solution([sigma_1 + sigma_4], [i])
@@ -701,6 +778,8 @@ class RouteBuilder:
                                 bestSol = obj
                                 saveMove = (i, k, j, l)
                                 savef = f
+        if count != len(do_or_not) - 1:
+            raise Exception('inter_2opt_random_error')
         if saveMove:
             i = saveMove[0]
             k = saveMove[1]
