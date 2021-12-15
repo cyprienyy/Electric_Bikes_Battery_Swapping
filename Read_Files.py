@@ -42,7 +42,7 @@ def resolve_soloman(info, mat):
 
 
 def solve_soloman():
-    file_path = r'.\solomon_50\R112.txt'
+    file_path = r'.\solomon_25\C202.txt'
     _info, _mat = read_single_soloman(file_path)
     _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
     _dis_mat = np.around(_dis_mat, 1)
@@ -106,26 +106,26 @@ def transform_soloman(filepath=r'.\solomon_50\RC202.txt'):
 
     _station_num = _dis_mat.shape[0] - 1
 
-    _vehicle_num = 2
+    _vehicle_num = 4
 
     # _capacity = _capacity
-    _capacity = 200
+    _capacity = 100
 
-    H = _t_win[0, 1] * 2
+    H = _t_win[0, 1] * 1
 
     _dis_mat = np.around(_dis_mat, 1) * 1
 
     _nodes = list(range(1, _station_num + 1))
     _t_lower_bound = [0] * _station_num
     _t_upper_bound = _t_win[1:, 1].tolist()
-    _t_upper_bound = [i * 1.5 for i in _t_upper_bound]
+    _t_upper_bound = [i * 0.8 for i in _t_upper_bound]
     _demand = _demand[1:].tolist()
     _t_ser = _t_ser[1:].tolist()
     _w_i = [1] * _station_num
     _H = [H] * _station_num
 
     _min_dis = np.min(_dis_mat[_dis_mat > 0])
-    _loss = _min_dis * (1 + np.random.rand(_station_num)) * 2
+    _loss = _min_dis * (1 + np.random.rand(_station_num)) * 25
     _loss = np.around(_loss, 1)
     _loss.tolist()
 
@@ -159,7 +159,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-def solve_self_created_case(filepath=r'.\C101.csv'):
+def solve_self_created_case(filepath=r'.\RC202_50.csv'):
     pos = resolve_self_created_case(filepath)
     _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
     _c_ij = np.array(pos[1:_station_num + 2])
@@ -178,21 +178,22 @@ def solve_self_created_case(filepath=r'.\C101.csv'):
                                  [H] * _vehicle_num, [_capacity] * _vehicle_num)
     routeBuilder.add_tasks(_nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss)
 
-    time_start = time.time()
+    time_start = time.perf_counter()
     routeBuilder.build_initial_solution()
-    print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
+    # print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
     routeBuilder.print_sol()
     # print(routeBuilder.get_sol_schedule())
     print(routeBuilder.best_feas_obj)
+    print(routeBuilder.unassigned_tasks)
     routeBuilder.multiple_neighborhood_search()
-    print(routeBuilder.best_feas_obj)
-    end_time = time.time()
+    print('最终结果', routeBuilder.best_feas_obj)
+    end_time = time.perf_counter()
     print('用时', end_time - time_start)
     routeBuilder.print_sol()
     print(routeBuilder.get_feasibility(routeBuilder.routes, range(_vehicle_num)))
-    print(routeBuilder.get_sol_schedule())
-    print(routeBuilder.evaluate_solution_by_total_distance(routeBuilder.routes))
-    print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num)))
+    # print(routeBuilder.get_sol_schedule())
+    # print(routeBuilder.evaluate_solution_by_total_distance(routeBuilder.routes))
+    # print(routeBuilder.evaluate_solution_by_time_func_of_task(routeBuilder.routes, range(_vehicle_num)))
 
     # routes = [[0, 32, 39, 28, 31, 44, 33, 34, 46, 35, 29, 50, 38, 51, 27, 0],
     #           [0, 47, 48, 30, 49, 40, 42, 43, 45, 37, 36, 41, 0]]
@@ -203,8 +204,9 @@ def solve_self_created_case(filepath=r'.\C101.csv'):
 
 
 if __name__ == '__main__':
-    transform_soloman()
-    # solve_self_created_case()
+    # transform_soloman()
+    for i in range(3):
+        solve_self_created_case()
     # solve_soloman()
     '''
     print(routeBuilder.best_feas_sol)

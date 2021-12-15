@@ -3,7 +3,7 @@ import random
 
 # 定义宏观变量。
 satellite = -1
-upper_limit = 3600
+upper_limit = 10000
 lower_limit = 0
 
 # 与Multiple Neighborhood Search相关宏观变量。

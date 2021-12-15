@@ -4,6 +4,7 @@ from ortools.constraint_solver import pywrapcp
 import csv
 import re
 import numpy as np
+from Routes import RouteBuilder
 
 
 def resolve_self_created_case(filename):
@@ -25,7 +26,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-filepath = r'.\RC101.csv'
+filepath = r'.\RC202_50.csv'
 pos = resolve_self_created_case(filepath)
 _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
 _c_ij = np.array(pos[1:_station_num + 2])
@@ -128,6 +129,7 @@ def print_solution(data, manager, routing, assignment, finalRoute):
     print('Total distance of all routes: {}m'.format(total_distance))
     print('Total load of all routes: {}'.format(total_load))
     print(finalRoute)
+    return finalRoute
 
 
 manager = pywrapcp.RoutingIndexManager(len(data['distance_matrix']),
@@ -192,13 +194,41 @@ routing.AddDimension(
 search_parameters = pywrapcp.DefaultRoutingSearchParameters()
 search_parameters.first_solution_strategy = (
     routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
+search_parameters.local_search_metaheuristic = (
+    routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+search_parameters.time_limit.seconds = 120
+search_parameters.log_search = True
 # Solve the problem.
 assignment = routing.SolveWithParameters(search_parameters)
+
+
+def evaluate(routes):
+    pos = resolve_self_created_case(filepath)
+    _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
+    _c_ij = np.array(pos[1:_station_num + 2])
+    _t_ij = _c_ij / 1
+    _nodes_info = pos[_station_num + 2:]
+    _nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss = zip(*_nodes_info)
+    _nodes = list(map(int, _nodes))
+    _t_lower_bound = list(map(int, _t_lower_bound))
+    _t_upper_bound = list(map(int, _t_upper_bound))
+    _demand = list(map(int, _demand))
+    _t_ser = list(map(int, _t_ser))
+    _w_i = list(map(int, _w_i))
+    _H = list(map(int, _H))
+    routeBuilder = RouteBuilder(_c_ij, _t_ij)
+    routeBuilder.add_empty_route([0] * _vehicle_num, [0] * _vehicle_num, [0] * _vehicle_num,
+                                 [H] * _vehicle_num, [_capacity] * _vehicle_num)
+    routeBuilder.add_tasks(_nodes, _t_lower_bound, _t_upper_bound, _demand, _t_ser, _w_i, _H, _loss)
+    print(routeBuilder.get_feasibility(routes, range(_vehicle_num)))
+    print(routeBuilder.evaluate_solution(routes, range(_vehicle_num)))
+
 
 finalRoute = []
 # Print solution on console.
 if assignment:
     print_solution(data, manager, routing, assignment, finalRoute)
+    evaluate(finalRoute)
 else:
     print('No results')
 
