@@ -21,6 +21,7 @@ neighborhoods = ['node_relocation',
                  'intra_route_2opt',
                  'nodes_swap'
                  ]
+random.shuffle(neighborhoods)
 
 
 class Task:

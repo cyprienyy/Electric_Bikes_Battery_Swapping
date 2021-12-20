@@ -30,14 +30,12 @@ for maxIter do
     end if
 end for
 """
-
+# 906.6625090161937
 from Read_Files import resolve_station_inventory
 
-routes = [[0, 100, 83, 61, 82, -1, 0], [0, 99, 98, 70, -1, 60, 80, 75, 76, 90, 74, -1, 65, 89, -1, 0],
- [0, 81, 71, 86, 85, 55, 72, -1, 53, 73, 92, 66, 94, 93, 95, 67, 88, -1, 0],
- [0, 79, 78, -1, 91, 77, 63, 54, 84, 101, 52, -1, 64, 57, 56, 68, 96, 59, 97, 87, 62, -1, 69, 58, -1, 0]]
+routes = [[0, 38, 40, 42, 44, -1, 48, 47, 46, 49, 36, 31, 29, -1, 35, 32, 34, 30, 37, 33, -1, 50, 51, 28, 27, -1, 0], [0, 39, 43, 41, -1, 45, 0]]
 
-filepath = r'.\R101_50.csv'
+filepath = r'.\C101.csv'
 pos = resolve_self_created_case(filepath)
 _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
 _c_ij = np.array(pos[1:_station_num + 2])

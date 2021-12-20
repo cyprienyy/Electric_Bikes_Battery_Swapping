@@ -26,7 +26,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-filepath = r'.\RC202_50.csv'
+filepath = r'.\RC201_50.csv'
 pos = resolve_self_created_case(filepath)
 _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
 _c_ij = np.array(pos[1:_station_num + 2])
@@ -53,7 +53,7 @@ data['depot'] = 0
 
 demands = [0] + _demand
 point2Add = max(sum(demands), 0)
-point2Add = int(point2Add / _capacity + 3) * _capacity
+point2Add = int(point2Add / _capacity + 10) * _capacity
 
 demands = demands + [-1] * point2Add
 

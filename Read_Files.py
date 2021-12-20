@@ -42,7 +42,7 @@ def resolve_soloman(info, mat):
 
 
 def solve_soloman():
-    file_path = r'.\solomon_25\C202.txt'
+    file_path = r'.\solomon_25\R201.txt'
     _info, _mat = read_single_soloman(file_path)
     _vehicle_num, _capacity, _dis_mat, _demand, _t_win, _t_ser = resolve_soloman(_info, _mat)
     _dis_mat = np.around(_dis_mat, 1)
@@ -159,7 +159,7 @@ def resolve_self_created_case(filename):
     return pos
 
 
-def solve_self_created_case(filepath=r'.\RC202_50.csv'):
+def solve_self_created_case(filepath=r'.\C101.csv'):
     pos = resolve_self_created_case(filepath)
     _station_num, _vehicle_num, _capacity, H = map(int, pos[0])
     _c_ij = np.array(pos[1:_station_num + 2])
@@ -205,7 +205,7 @@ def solve_self_created_case(filepath=r'.\RC202_50.csv'):
 
 if __name__ == '__main__':
     # transform_soloman()
-    for i in range(3):
+    for i in range(10):
         solve_self_created_case()
     # solve_soloman()
     '''
